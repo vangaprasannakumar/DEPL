@@ -3,10 +3,9 @@
   "short_name":  "Capco HR",
   "description": "Enterprise HR, Payroll, and AI Attendance System for Capco Capacitor — Muppireddypally, Telangana",
 
-  "id": "/index.html",
-
-  "start_url": "/DEPL",
-  "scope":     "/",
+  "id": "/DEPL/index.html",
+  "start_url": "/DEPL/index.html",
+  "scope": "/DEPL/",
 
   "display":          "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
@@ -41,7 +40,7 @@
       "name":        "Punch IN",
       "short_name":  "IN",
       "description": "Open the kiosk screen and immediately begin face recognition for punch-in",
-      "url":         "/index.html?action=in",
+      "url":         "/DEPL/index.html?action=in",
       "icons": [
         {
           "src":   "https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png",
@@ -54,7 +53,7 @@
       "name":        "Punch OUT",
       "short_name":  "OUT",
       "description": "Open the kiosk screen and immediately begin face recognition for punch-out",
-      "url":         "/index.html?action=out",
+      "url":         "/DEPL/index.html?action=out",
       "icons": [
         {
           "src":   "https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png",
