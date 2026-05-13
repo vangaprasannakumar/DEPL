@@ -1,0 +1,108 @@
+{
+  "name":        "Capco Workforce",
+  "short_name":  "Capco HR",
+  "description": "Enterprise HR, Payroll, and AI Attendance System for Capco Capacitor — Muppireddypally, Telangana",
+
+  "id": "/index.html",
+
+  "start_url": "/index.html",
+  "scope":     "/",
+
+  "display":          "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+
+  "background_color": "#09090b",
+  "theme_color":      "#09090b",
+  "orientation":      "portrait-primary",
+
+  "icons": [
+    {
+      "src":     "https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png",
+      "sizes":   "192x192",
+      "type":    "image/png",
+      "purpose": "any"
+    },
+    {
+      "src":     "https://i.postimg.cc/FzbHSc1B/launchericon_512x512.png",
+      "sizes":   "512x512",
+      "type":    "image/png",
+      "purpose": "any"
+    },
+    {
+      "src":     "https://i.postimg.cc/FzbHSc1B/launchericon_512x512.png",
+      "sizes":   "512x512",
+      "type":    "image/png",
+      "purpose": "maskable"
+    }
+  ],
+
+  "shortcuts": [
+    {
+      "name":        "Punch IN",
+      "short_name":  "IN",
+      "description": "Open the kiosk screen and immediately begin face recognition for punch-in",
+      "url":         "/index.html?action=in",
+      "icons": [
+        {
+          "src":   "https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png",
+          "sizes": "192x192",
+          "type":  "image/png"
+        }
+      ]
+    },
+    {
+      "name":        "Punch OUT",
+      "short_name":  "OUT",
+      "description": "Open the kiosk screen and immediately begin face recognition for punch-out",
+      "url":         "/index.html?action=out",
+      "icons": [
+        {
+          "src":   "https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png",
+          "sizes": "192x192",
+          "type":  "image/png"
+        }
+      ]
+    }
+  ],
+
+  "screenshots": [
+    {
+      "_comment_FIX_ERR13_NARROW_1": "REPLACE src with a real 540×720 screenshot of the Attendance Entry screen. Steps: (1) Open the app on Android Chrome. (2) Navigate to the Attendance Entry tab. (3) Screenshot with a visible employee selected and status badge showing. (4) Upload to https://postimg.cc and paste the direct image URL below.",
+      "src":        "https://i.postimg.cc/qBYmyZCL/Attendance-Entry-with-bgc.png",
+      "sizes":      "540x720",
+      "type":       "image/png",
+      "form_factor": "narrow",
+      "label":      "Attendance Entry — search employee and punch IN or OUT"
+    },
+    {
+      "_comment_FIX_ERR13_NARROW_2": "REPLACE src with a real 540×720 screenshot of the Admin Dashboard (Reports tab). Steps: (1) Log in as Admin. (2) Go to Dashboard Reports tab with live stats visible. (3) Screenshot. (4) Upload to postimg.cc and paste direct URL below.",
+      "src":        "https://i.postimg.cc/sf8n70ZJ/Admin-Dashboard-with-bgc.png",
+      "sizes":      "540x720",
+      "type":       "image/png",
+      "form_factor": "narrow",
+      "label":      "Admin Dashboard — live staff overview with payroll summary"
+    },
+    {
+      "_comment_FIX_ERR13_NARROW_3": "REPLACE src with a real 540×720 screenshot of the Face Recognition Kiosk screen. Steps: (1) Open Kiosk tab. (2) Start the camera. (3) Screenshot with the green camera overlay active. (4) Upload to postimg.cc and paste direct URL below.",
+      "src":        "https://i.postimg.cc/v8jPfS6X/Face-Kiosk-with-bgc.png",
+      "sizes":      "540x720",
+      "type":       "image/png",
+      "form_factor": "narrow",
+      "label":      "Face Recognition Kiosk — instant AI punch-in terminal"
+    },
+    {
+      "_comment_FIX_ERR13_WIDE": "REPLACE src with a real 1280×720 desktop screenshot (required for Chrome desktop PWA install prompt). Steps: (1) Open the app in Chrome on a PC. (2) Press F12 → toggle Device toolbar OFF (full desktop view). (3) Screenshot the full app window at 1280×720. (4) Upload to postimg.cc and paste direct URL below.",
+      "src":        "https://i.postimg.cc/kMk0q5sh/Desktop-view-1280x720.png",
+      "sizes":      "1280x720",
+      "type":       "image/png",
+      "form_factor": "wide",
+      "label":      "Capco Workforce — HR and attendance management on desktop"
+    }
+  ],
+
+  "categories": ["business", "productivity"],
+  "lang":       "en-IN",
+
+  "related_applications":      [],
+  "prefer_related_applications": false
+}
