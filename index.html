@@ -2764,7 +2764,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         showToast('CSV Downloaded');
     }
 
-    // ── EXPORT EXCEL ──
+    // ── EXPORT MONTHLY DASHBOARD EXCEL ──
     async function downloadDashboardReport() {
         const m = document.getElementById('report-dash-month').value;
         if (!m) { showToast('Please select a month.', 'warn'); return; }
@@ -2773,15 +2773,34 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         if (res.status === 'error') { hideLoader(); showToast(res.message, 'error'); return; }
 
         const [year, monthNum] = m.split('-');
-        const monthName = new Date(year, parseInt(monthNum)-1, 1).toLocaleString('default', { month:'long' });
-        const fileName  = `${monthName} ${year} - Monthly Dashboard.xlsx`;
+        const monthName  = new Date(year, parseInt(monthNum)-1, 1).toLocaleString('default', { month:'long' });
+        const isCurrent  = !!res.cutoffInfo;
+        const asOfSuffix = isCurrent ? ` — As of ${res.cutoffInfo}` : '';
+        const fileName   = `${monthName} ${year} - Monthly Dashboard${asOfSuffix}.xlsx`;
 
         const workbook = new ExcelJS.Workbook();
         const sheet    = workbook.addWorksheet('Dashboard');
+
+        // ── Title row (only for current-month downloads) ──────────────────────
+        if (isCurrent) {
+            sheet.addRow([`${monthName} ${year}  |  Attendance Report — Data as of ${res.cutoffInfo}  |  Future dates are blank`]);
+            sheet.mergeCells(1, 1, 1, res.header1.length);
+            const titleCell = sheet.getRow(1).getCell(1);
+            titleCell.style = {
+                font:      { bold:true, size:11, color:{ argb:'FFFFFFFF' } },
+                fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FF1E3A5F' } },
+                alignment: { horizontal:'center', vertical:'middle' }
+            };
+            sheet.getRow(1).height = 22;
+        }
+
+        // ── Attendance matrix header rows ─────────────────────────────────────
         sheet.addRow(res.header1);
         sheet.addRow(res.header2);
-        res.rows.forEach(r => sheet.addRow(r));
-        sheet.views = [{ state:'frozen', xSplit:2, ySplit:2 }];
+
+        const headerRowOffset = isCurrent ? 1 : 0;   // rows shifted down if title exists
+        const h1RowNum = 1 + headerRowOffset;
+        const h2RowNum = 2 + headerRowOffset;
 
         const headerStyle = {
             font:      { bold:true, color:{ argb:'FFFFFFFF' } },
@@ -2789,42 +2808,353 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
             alignment: { horizontal:'center', vertical:'middle' },
             border:    { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} }
         };
-        sheet.getRow(1).eachCell(c => { c.style = headerStyle; });
-        sheet.getRow(2).eachCell(c => { c.style = headerStyle; });
-        sheet.mergeCells('A1:A2'); sheet.mergeCells('B1:B2');
+        sheet.getRow(h1RowNum).eachCell(c => { c.style = headerStyle; });
+        sheet.getRow(h2RowNum).eachCell(c => { c.style = headerStyle; });
+        sheet.mergeCells(h1RowNum, 1, h2RowNum, 1);
+        sheet.mergeCells(h1RowNum, 2, h2RowNum, 2);
 
-        for (let rowIdx = 3; rowIdx <= sheet.rowCount; rowIdx++) {
+        // ── Data rows ─────────────────────────────────────────────────────────
+        res.rows.forEach(r => sheet.addRow(r));
+
+        const dataStartRow = 3 + headerRowOffset;
+        for (let rowIdx = dataStartRow; rowIdx <= sheet.rowCount; rowIdx++) {
             const row = sheet.getRow(rowIdx);
-            row.eachCell((cell, colIdx) => {
+            row.eachCell({ includeEmpty:true }, (cell, colIdx) => {
                 cell.border    = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
                 cell.alignment = { horizontal:'center', vertical:'middle' };
                 if (colIdx === 2) cell.alignment.horizontal = 'left';
+
                 const h2Val = res.header2[colIdx - 1];
-                if (h2Val === 'SUN' || res.header1[colIdx - 1] === '') {
+                const h1Val = res.header1[colIdx - 1];
+
+                // Sunday columns → yellow
+                if (h2Val === 'SUN') {
                     cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFEF08A' } };
                 }
+                // Future day columns (header2 = '···') → light grey, muted text
+                else if (h2Val === '···') {
+                    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFF3F4F6' } };
+                    cell.font = { color:{ argb:'FFD1D5DB' }, italic:true };
+                }
+
+                // Attendance value colours
                 if (cell.value === 'X')  cell.font = { color:{ argb:'FF10B981' }, bold:true };
                 if (cell.value === 'A')  cell.font = { color:{ argb:'FFEF4444' }, bold:true };
                 if (cell.value === 'EL') cell.font = { color:{ argb:'FFF59E0B' }, bold:true };
             });
         }
-        sheet.getColumn(1).width = 6; sheet.getColumn(2).width = 25;
-        for (let i=3; i<=sheet.columnCount; i++) sheet.getColumn(i).width = 5;
+
+        // ── Column widths ─────────────────────────────────────────────────────
+        sheet.views = [{ state:'frozen', xSplit:2, ySplit: isCurrent ? 3 : 2 }];
+        sheet.getColumn(1).width = 6;
+        sheet.getColumn(2).width = 26;
+        for (let i = 3; i <= sheet.columnCount; i++) sheet.getColumn(i).width = 5;
         const len = res.header1.length;
-        sheet.getColumn(len-2).width=8; sheet.getColumn(len-1).width=8; sheet.getColumn(len).width=10;
+        sheet.getColumn(len-2).width = 8;
+        sheet.getColumn(len-1).width = 8;
+        sheet.getColumn(len).width   = 10;
 
         const buffer = await workbook.xlsx.writeBuffer();
         const blob   = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const link   = document.createElement('a');
         link.href = URL.createObjectURL(blob); link.download = fileName;
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        // FIX BUG: Revoke object URL to free memory (was missing for Excel — present for CSV)
         URL.revokeObjectURL(link.href);
         hideLoader();
         showToast('Excel Downloaded Successfully');
     }
 
-    // ── THEME ──
+    // ── EXPORT MONTHLY SALARY REPORT (with live Excel formulas) ──────────────
+    // Column map:
+    //   A=EmplID  B=Name  C=P.M(Gross)  D=Basic  E=HRA  F=Conv  G=Spl  H=Medical
+    //   I=P/Days  J=Ph/Days  K=Leaves  L=Absent  M=TotalDays
+    //   N=Basic(pro)  O=HRA(pro)  P=Conv(pro)  Q=Spl(pro)  R=Medical(pro)
+    //   S=GROSS  T=EPF  U=ESI  V=PT  W=ADV  X=T.DED  Y=NET  Z=SIGN
+    //
+    // Columns N–Y contain live Excel formulas so HR can adjust values manually
+    // and all totals recalculate automatically.
+    async function downloadSalaryReport() {
+        const m = document.getElementById('report-salary-month').value;
+        if (!m) { showToast('Please select a month.', 'warn'); return; }
+        showLoader('excel');
+
+        const res = await callGoogleAPI({ action:'exportSalaryReport', month:m });
+        if (res.status === 'error') { hideLoader(); showToast(res.message, 'error'); return; }
+
+        const [year, monthNum] = m.split('-');
+        const monthName  = new Date(year, parseInt(monthNum)-1, 1).toLocaleString('default', { month:'long' });
+        const asOfSuffix = res.cutoffInfo ? ` — As of ${res.cutoffInfo}` : '';
+        const fileName   = `${monthName} ${year} - Monthly Salary Report${asOfSuffix}.xlsx`;
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet    = workbook.addWorksheet('Salary Report');
+
+        // ── Common border helper ───────────────────────────────────────────────
+        const border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+        const thickBorder = {
+            top:{style:'medium'}, left:{style:'medium'},
+            bottom:{style:'medium'}, right:{style:'medium'}
+        };
+
+        // ── Row 1: Company / report title ─────────────────────────────────────
+        sheet.addRow([`CAPCO CAPACITOR — ${monthName.toUpperCase()} ${year} MONTHLY SALARY STATEMENT${asOfSuffix}`]);
+        sheet.mergeCells('A1:Z1');
+        sheet.getRow(1).height = 28;
+        sheet.getRow(1).getCell(1).style = {
+            font:      { bold:true, size:13, color:{ argb:'FFFFFFFF' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0F172A' } },
+            alignment: { horizontal:'center', vertical:'middle' }
+        };
+
+        // ── Row 2: Group header (Fixed salary group | Attendance | Calculated group) ──
+        sheet.addRow([]);   // placeholder — we fill via mergeCells below
+        sheet.getRow(2).height = 20;
+
+        // Group: Fixed Salary Structure (A–H)
+        sheet.mergeCells('A2:H2');
+        sheet.getRow(2).getCell(1).value = 'EMPLOYEE & FIXED SALARY STRUCTURE';
+        sheet.getRow(2).getCell(1).style = {
+            font:      { bold:true, size:10, color:{ argb:'FF1E3A5F' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFdbeafe' } },
+            alignment: { horizontal:'center', vertical:'middle' },
+            border
+        };
+
+        // Group: Attendance (I–M)
+        sheet.mergeCells('I2:M2');
+        sheet.getRow(2).getCell(9).value = 'ATTENDANCE';
+        sheet.getRow(2).getCell(9).style = {
+            font:      { bold:true, size:10, color:{ argb:'FF14532D' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFdcfce7' } },
+            alignment: { horizontal:'center', vertical:'middle' },
+            border
+        };
+
+        // Group: Prorated Earnings (N–S)
+        sheet.mergeCells('N2:S2');
+        sheet.getRow(2).getCell(14).value = 'PRORATED EARNINGS (FORMULA)';
+        sheet.getRow(2).getCell(14).style = {
+            font:      { bold:true, size:10, color:{ argb:'FF1E3A5F' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFe0f2fe' } },
+            alignment: { horizontal:'center', vertical:'middle' },
+            border
+        };
+
+        // Group: Deductions (T–X)
+        sheet.mergeCells('T2:X2');
+        sheet.getRow(2).getCell(20).value = 'DEDUCTIONS (FORMULA)';
+        sheet.getRow(2).getCell(20).style = {
+            font:      { bold:true, size:10, color:{ argb:'FF7F1D1D' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFffe4e6' } },
+            alignment: { horizontal:'center', vertical:'middle' },
+            border
+        };
+
+        // Group: NET & SIGN (Y–Z)
+        sheet.mergeCells('Y2:Z2');
+        sheet.getRow(2).getCell(25).value = 'NET PAY';
+        sheet.getRow(2).getCell(25).style = {
+            font:      { bold:true, size:10, color:{ argb:'FF14532D' } },
+            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFbbf7d0' } },
+            alignment: { horizontal:'center', vertical:'middle' },
+            border
+        };
+
+        // ── Row 3: Column sub-headers ─────────────────────────────────────────
+        const colHeaders = [
+            'EMP ID','NAME',
+            'P.M\n(Gross)','BASIC','HRA','Conv.\nAllow','Spl\nAllow','Medical',
+            'P/Days','Ph/Days','Leaves\nAvailed','Absent\nDays','TOTAL\nDays',
+            'BASIC','HRA','Conv.\nAllow','Spl\nAllow','Medical','GROSS',
+            'E.P.F','E.S.I','P.T','ADV.','T.DED.','NET','SIGN'
+        ];
+        sheet.addRow(colHeaders);
+        sheet.getRow(3).height = 32;
+
+        // Style column sub-headers with group colours
+        const colFills = [
+            'FFdbeafe','FFdbeafe',                                                // A-B: identity
+            'FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe',    // C-H: fixed salary
+            'FFdcfce7','FFdcfce7','FFdcfce7','FFdcfce7','FFdcfce7',              // I-M: attendance
+            'FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe',   // N-S: prorated
+            'FFffe4e6','FFffe4e6','FFffe4e6','FFffe4e6','FFffe4e6',               // T-X: deductions
+            'FFbbf7d0','FFfefce8'                                                 // Y: net  Z: sign
+        ];
+        const colTextColors = [
+            'FF1e3a5f','FF1e3a5f',
+            'FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f',
+            'FF14532d','FF14532d','FF14532d','FF14532d','FF14532d',
+            'FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f',
+            'FF7f1d1d','FF7f1d1d','FF7f1d1d','FF7f1d1d','FF7f1d1d',
+            'FF14532d','FF713f12'
+        ];
+        sheet.getRow(3).eachCell((cell, ci) => {
+            cell.style = {
+                font:      { bold:true, size:9, color:{ argb: colTextColors[ci-1] || 'FF1e3a5f' } },
+                fill:      { type:'pattern', pattern:'solid', fgColor:{ argb: colFills[ci-1] || 'FFf3f4f6' } },
+                alignment: { horizontal:'center', vertical:'middle', wrapText:true },
+                border
+            };
+        });
+
+        // ── Rows 4+: Data rows with live formulas ─────────────────────────────
+        const DATA_START_ROW = 4;
+        res.rows.forEach((emp, idx) => {
+            const r = DATA_START_ROW + idx;   // Excel row number for this employee
+
+            const dataRow = sheet.addRow([
+                emp.id,          // A — Empl ID
+                emp.name,        // B — Name
+                emp.gross,       // C — P.M (Gross)
+                emp.basic,       // D — Basic
+                emp.hra,         // E — HRA
+                emp.conv,        // F — Conv Allow
+                emp.spl,         // G — Spl Allow
+                emp.med,         // H — Medical
+                emp.pDays,       // I — P/Days
+                emp.phDays,      // J — Ph/Days
+                emp.leavesAvailed, // K — Leaves Availed
+                emp.absentDays,  // L — Absent Days
+                emp.totalDays,   // M — Total Days in Month
+                // ── N: Prorated Basic ──────────────────────────────────────
+                { formula: `=ROUND(D${r}*(I${r}+J${r})/M${r},0)` },
+                // ── O: Prorated HRA ────────────────────────────────────────
+                { formula: `=ROUND(E${r}*(I${r}+J${r})/M${r},0)` },
+                // ── P: Prorated Conv ───────────────────────────────────────
+                { formula: `=ROUND(F${r}*(I${r}+J${r})/M${r},0)` },
+                // ── Q: Prorated Spl Allow ──────────────────────────────────
+                { formula: `=ROUND(G${r}*(I${r}+J${r})/M${r},0)` },
+                // ── R: Prorated Medical ────────────────────────────────────
+                { formula: `=ROUND(H${r}*(I${r}+J${r})/M${r},0)` },
+                // ── S: GROSS (direct from full gross, avoids rounding drift) ─
+                { formula: `=ROUND(C${r}*(I${r}+J${r})/M${r},0)` },
+                // ── T: E.P.F = 12% of prorated Basic ──────────────────────
+                { formula: `=ROUND(N${r}*0.12,0)` },
+                // ── U: E.S.I = 0.75% of GROSS (only if P.M ≤ ₹21,000) ────
+                { formula: `=IF(C${r}<=21000,ROUND(S${r}*0.0075,0),0)` },
+                // ── V: P.T = ₹200 / ₹150 / ₹0 based on full gross ─────────
+                { formula: `=IF(C${r}>=20000,200,IF(C${r}>=15000,150,0))` },
+                // ── W: ADV. (Advance) — editable, default 0 ───────────────
+                0,
+                // ── X: Total Deductions ────────────────────────────────────
+                { formula: `=T${r}+U${r}+V${r}+W${r}` },
+                // ── Y: NET PAY ─────────────────────────────────────────────
+                { formula: `=S${r}-X${r}` },
+                // ── Z: SIGN (blank for physical signature) ─────────────────
+                ''
+            ]);
+
+            // Alternate row background for readability
+            const rowBg = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
+
+            dataRow.eachCell({ includeEmpty:true }, (cell, ci) => {
+                const isFixed    = ci >= 3  && ci <= 8;
+                const isAtt      = ci >= 9  && ci <= 13;
+                const isProrated = ci >= 14 && ci <= 19;
+                const isDeduct   = ci >= 20 && ci <= 24;
+                const isNet      = ci === 25;
+
+                let bgArgb = rowBg;
+                if (isFixed)    bgArgb = idx % 2 === 0 ? 'FFf0f9ff' : 'FFe0f2fe';
+                if (isAtt)      bgArgb = idx % 2 === 0 ? 'FFf0fdf4' : 'FFdcfce7';
+                if (isProrated) bgArgb = idx % 2 === 0 ? 'FFf0f9ff' : 'FFe0f2fe';
+                if (isDeduct)   bgArgb = idx % 2 === 0 ? 'FFfff1f2' : 'FFffe4e6';
+                if (isNet)      bgArgb = idx % 2 === 0 ? 'FFf0fdf4' : 'FFdcfce7';
+
+                cell.style = {
+                    fill:      { type:'pattern', pattern:'solid', fgColor:{ argb: bgArgb } },
+                    alignment: { horizontal: ci <= 2 ? 'left' : 'center', vertical:'middle' },
+                    border,
+                    font:      { size:10 }
+                };
+
+                // Bold and green for NET PAY
+                if (isNet) cell.font = { bold:true, size:10, color:{ argb:'FF065F46' } };
+                // Italic for formula columns (N–X) to indicate they are editable formulas
+                if (ci >= 14 && ci <= 25 && ci !== 25) cell.font = { size:10, italic:true };
+                // NET stays bold
+                if (isNet) cell.font = { bold:true, size:10, color:{ argb:'FF065F46' }, italic:false };
+
+                // Number format for currency columns (C onwards, except I-M attendance counts)
+                if (ci >= 3 && ci !== 26) {
+                    if (ci < 9 || ci > 13) {
+                        cell.numFmt = '₹#,##0';
+                    }
+                }
+            });
+
+            dataRow.height = 18;
+        });
+
+        // ── Totals row ────────────────────────────────────────────────────────
+        if (res.rows.length > 0) {
+            const firstDataRow = DATA_START_ROW;
+            const lastDataRow  = DATA_START_ROW + res.rows.length - 1;
+
+            const totalRow = sheet.addRow([
+                '', 'TOTAL',
+                { formula: `=SUM(C${firstDataRow}:C${lastDataRow})` },  // C
+                { formula: `=SUM(D${firstDataRow}:D${lastDataRow})` },  // D
+                { formula: `=SUM(E${firstDataRow}:E${lastDataRow})` },  // E
+                { formula: `=SUM(F${firstDataRow}:F${lastDataRow})` },  // F
+                { formula: `=SUM(G${firstDataRow}:G${lastDataRow})` },  // G
+                { formula: `=SUM(H${firstDataRow}:H${lastDataRow})` },  // H
+                { formula: `=SUM(I${firstDataRow}:I${lastDataRow})` },  // I P/Days
+                '',   // J Ph/Days — total not meaningful
+                { formula: `=SUM(K${firstDataRow}:K${lastDataRow})` },  // K Leaves
+                { formula: `=SUM(L${firstDataRow}:L${lastDataRow})` },  // L Absent
+                '',   // M TotalDays — not summed
+                { formula: `=SUM(N${firstDataRow}:N${lastDataRow})` },  // N
+                { formula: `=SUM(O${firstDataRow}:O${lastDataRow})` },  // O
+                { formula: `=SUM(P${firstDataRow}:P${lastDataRow})` },  // P
+                { formula: `=SUM(Q${firstDataRow}:Q${lastDataRow})` },  // Q
+                { formula: `=SUM(R${firstDataRow}:R${lastDataRow})` },  // R
+                { formula: `=SUM(S${firstDataRow}:S${lastDataRow})` },  // S GROSS
+                { formula: `=SUM(T${firstDataRow}:T${lastDataRow})` },  // T EPF
+                { formula: `=SUM(U${firstDataRow}:U${lastDataRow})` },  // U ESI
+                { formula: `=SUM(V${firstDataRow}:V${lastDataRow})` },  // V PT
+                { formula: `=SUM(W${firstDataRow}:W${lastDataRow})` },  // W ADV
+                { formula: `=SUM(X${firstDataRow}:X${lastDataRow})` },  // X T.DED
+                { formula: `=SUM(Y${firstDataRow}:Y${lastDataRow})` },  // Y NET
+                ''    // Z SIGN
+            ]);
+            totalRow.height = 22;
+            totalRow.eachCell({ includeEmpty:true }, (cell, ci) => {
+                cell.style = {
+                    font:      { bold:true, size:10, color:{ argb:'FFFFFFFF' } },
+                    fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0F172A' } },
+                    alignment: { horizontal: ci <= 2 ? 'left' : 'center', vertical:'middle' },
+                    border,
+                    numFmt:    (ci >= 3 && (ci < 9 || ci > 13) && ci !== 26) ? '₹#,##0' : 'General'
+                };
+            });
+        }
+
+        // ── Column widths ─────────────────────────────────────────────────────
+        sheet.getColumn('A').width = 8;
+        sheet.getColumn('B').width = 28;
+        ['C','D','E','F','G','H'].forEach(c => { sheet.getColumn(c).width = 10; });
+        ['I','J','K','L','M'].forEach(c => { sheet.getColumn(c).width = 8; });
+        ['N','O','P','Q','R','S'].forEach(c => { sheet.getColumn(c).width = 10; });
+        ['T','U','V'].forEach(c => { sheet.getColumn(c).width = 8; });
+        sheet.getColumn('W').width = 8;
+        sheet.getColumn('X').width = 9;
+        sheet.getColumn('Y').width = 11;
+        sheet.getColumn('Z').width = 14;
+
+        // ── Freeze panes: lock first 3 rows + first 2 columns ─────────────────
+        sheet.views = [{ state:'frozen', xSplit:2, ySplit:3 }];
+
+        // ── Download ──────────────────────────────────────────────────────────
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob   = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const link   = document.createElement('a');
+        link.href = URL.createObjectURL(blob); link.download = fileName;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        hideLoader();
+        showToast('Salary Report Downloaded ✅');
+    }
     let isLightMode = false;
     function toggleTheme() {
         isLightMode = !isLightMode;
