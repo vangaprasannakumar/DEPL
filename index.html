@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#09090b">
     <!-- MOD-07 / FIX ERR-12: Bump this date on every deploy.
          sw.js reads this at install time and uses it as the cache key,
-         so the old stale cache is automatically evicted on the next visit...
+         so the old stale cache is automatically evicted on the next visit.
          Format: YYYYMMDD -->
     <meta name="app-version" content="20260513">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -613,11 +613,24 @@
         <h3 style="margin-top:0;color:var(--text-main);">Master Reports</h3>
         <div class="card" style="margin-top:20px;">
             <h4 style="color:var(--accent);">Monthly Dashboard Report</h4>
-            <p>Generates a dynamic attendance matrix with automatic Holiday/Sunday calculations and Live Leave Balances.</p>
+            <p>Generates a dynamic attendance matrix with automatic Holiday/Sunday calculations and Live Leave Balances. For the current month, data is cut off at today — future days will not show as absent.</p>
             <label for="report-dash-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
             <div style="display:flex;gap:10px;">
                 <input type="month" id="report-dash-month" style="margin-bottom:0;">
                 <button class="btn-main" style="margin-top:0;" onclick="downloadDashboardReport()">Download Excel</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <h4 style="color:var(--success);">Monthly Salary Report</h4>
+            <p>Generates a complete salary statement for all employees — fixed salary structure, attendance counts, and all prorated + statutory calculations as <strong>live Excel formulas</strong> you can edit manually.</p>
+            <div style="margin-top:10px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;font-size:13px;color:var(--text-muted);">
+                📊 Columns: Empl ID · Name · Gross · Basic · HRA · Conv · Spl · Medical · P/Days · Ph/Days · Leaves · Absent · Total Days → Prorated Basic · HRA · Conv · Spl · Medical · GROSS · EPF · ESI · PT · ADV · T.DED · NET · SIGN
+            </div>
+            <label for="report-salary-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
+            <div style="display:flex;gap:10px;">
+                <input type="month" id="report-salary-month" style="margin-bottom:0;">
+                <button class="btn-main" style="margin-top:0;background:linear-gradient(135deg,var(--success),#059669);" onclick="downloadSalaryReport()">Download Excel</button>
             </div>
         </div>
     </div>
