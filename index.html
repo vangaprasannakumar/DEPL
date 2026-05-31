@@ -202,6 +202,36 @@
         }
         .pending-pill.visible { display:inline-flex; align-items:center; gap:3px; }
 
+        /* FIX FONT: Buttons do not inherit font-family from body in all browsers.
+           This forces Outfit across all button, input, and select elements. */
+        button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: 'Outfit', sans-serif; }
+
+        /* ── BELL NOTIFICATION ── */
+        .bell-btn { position:relative; background:none; border:1px solid rgba(128,128,128,0.2); border-radius:12px; width:38px; height:38px; display:none; justify-content:center; align-items:center; cursor:pointer; transition:all 0.2s; color:var(--text-muted); flex-shrink:0; padding:0; }
+        .bell-btn:hover { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.4); color:var(--warning); }
+        .bell-btn.has-requests { color:var(--warning); border-color:rgba(245,158,11,0.35); animation:bell-ring 3s ease-in-out infinite; }
+        @keyframes bell-ring { 0%,100%{transform:rotate(0)} 10%{transform:rotate(-12deg)} 20%{transform:rotate(12deg)} 30%{transform:rotate(-8deg)} 40%{transform:rotate(8deg)} 50%{transform:rotate(0)} }
+        .bell-badge { position:absolute; top:-5px; right:-5px; width:18px; height:18px; border-radius:50%; background:var(--danger); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg-dark); display:none; }
+        .bell-badge.visible { display:flex; }
+        /* Bell slide-down panel */
+        #bell-panel { display:none; position:absolute; top:calc(var(--topbar-h) + 4px); right:12px; width:min(96vw, 420px); background:var(--surface); border:1px solid var(--border); border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:5000; animation:slideUpFade 0.2s var(--ease); max-height:70vh; overflow-y:auto; }
+        #bell-panel.visible { display:block; }
+        .bell-panel-head { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:1px solid rgba(128,128,128,0.1); position:sticky; top:0; background:var(--surface); border-radius:20px 20px 0 0; }
+        .bell-panel-head h4 { margin:0; font-size:15px; color:var(--text-main); }
+        .bell-req-card { padding:14px 20px; border-bottom:1px solid rgba(128,128,128,0.08); }
+        .bell-req-card:last-child { border-bottom:none; }
+        .bell-req-name { font-size:13.5px; font-weight:600; color:var(--text-main); margin-bottom:3px; }
+        .bell-req-detail { font-size:12px; color:var(--text-muted); margin-bottom:8px; line-height:1.55; }
+        .bell-req-resolve { font-size:12px; font-weight:600; padding:5px 14px; border-radius:8px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:var(--success); cursor:pointer; transition:all 0.2s; }
+        .bell-req-resolve:hover { background:rgba(16,185,129,0.25); }
+        .bell-empty { padding:28px 20px; text-align:center; color:var(--text-muted); font-size:14px; }
+
+        /* ── REPORTS SUB-TABS ── */
+        #reports-emp-filter { background:rgba(128,128,128,0.04); border:1px solid rgba(128,128,128,0.1); border-radius:14px; padding:16px; margin-top:12px; }
+        .emp-filter-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:100px; border:1px solid rgba(128,128,128,0.2); background:rgba(128,128,128,0.06); font-size:12px; font-weight:500; cursor:pointer; transition:all 0.18s; margin:4px 3px; color:var(--text-muted); user-select:none; }
+        .emp-filter-chip.selected { background:rgba(59,130,246,0.14); border-color:var(--accent); color:var(--accent); }
+        .emp-filter-chip input[type=checkbox] { display:none; }
+
         /* ── ENROLLMENT REMINDER ── */
         .enroll-reminder {
             display:none; margin-top:14px; padding:14px 16px;
@@ -355,6 +385,15 @@
     <h3>CAPCO MASTER AI</h3>
 </div>
 
+    <!-- BELL PANEL — Correction Requests (Admin & HR) -->
+    <div id="bell-panel">
+        <div class="bell-panel-head">
+            <h4>🔔 Correction Requests</h4>
+            <button class="icon-btn" onclick="toggleBellPanel()" style="font-size:18px;color:var(--text-muted);">✕</button>
+        </div>
+        <div id="bell-panel-body"><div class="bell-empty">Loading...</div></div>
+    </div>
+
 <div id="toast">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
     <span id="toast-msg">Success!</span>
@@ -432,14 +471,18 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             <span>My Payslip</span>
         </div>
-        <div class="sidebar-section" id="snav-reports-section" style="display:none;">Reports</div>
-        <div class="sidebar-item hidden-item" id="snav-reports" onclick="navTo('reports')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <span>Dashboard Reports</span>
-        </div>
-        <div class="sidebar-section" id="snav-admin-section" style="display:none;">Admin</div>
-        <div class="sidebar-item hidden-item" id="snav-admin" onclick="navTo('admin')">
+
+        <div class="sidebar-section hidden-item" id="snav-admin-section">Admin</div>
+        <div class="sidebar-item hidden-item" id="snav-dashboard" onclick="navTo('dashboard')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span>Dashboard</span>
+        </div>
+        <div class="sidebar-item hidden-item" id="snav-reports" onclick="navTo('reports')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>Reports</span>
+        </div>
+        <div class="sidebar-item hidden-item" id="snav-admin" onclick="navTo('admin')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
             <span>Inventory</span>
         </div>
     </div>
@@ -468,6 +511,11 @@
         <div class="topbar-left"><span id="topbar-page-title">Attendance Entry</span></div>
         <div class="topbar-right">
             <span id="topbar-clock"></span>
+            <!-- 🔔 Bell notification — Admin & HR only -->
+            <button class="bell-btn" id="bell-btn-desktop" onclick="toggleBellPanel()" title="Correction Requests">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="bell-badge" id="bell-badge-desktop"></span>
+            </button>
             <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme" style="flex-shrink:0;">
                 <svg id="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 <svg id="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -490,7 +538,11 @@
                     <h2>HRMS</h2>
                 </div>
                 <div class="header-actions">
-                    <button class="icon-btn" id="mob-install-btn" style="display:none;color:var(--success);border-color:var(--success);" onclick="installPWA()">
+                    <!-- 🔔 Bell notification — Admin & HR only -->
+                    <button class="bell-btn" id="bell-btn-mobile" onclick="toggleBellPanel()" title="Correction Requests" style="width:36px;height:36px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                        <span class="bell-badge" id="bell-badge-mobile"></span>
+                    </button> style="display:none;color:var(--success);border-color:var(--success);" onclick="installPWA()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
                     <button class="icon-btn" onclick="hardRefreshApp(event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -610,32 +662,108 @@
 
     <!-- REPORTS VIEW -->
     <div id="view-reports" class="view-section">
-        <h3 style="margin-top:0;color:var(--text-main);">Master Reports</h3>
-        <div class="card" style="margin-top:20px;">
-            <h4 style="color:var(--accent);">Monthly Dashboard Report</h4>
-            <p>Generates a dynamic attendance matrix with automatic Holiday/Sunday calculations and Live Leave Balances. For the current month, data is cut off at today — future days will not show as absent.</p>
-            <label for="report-dash-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
-            <div style="display:flex;gap:10px;">
-                <input type="month" id="report-dash-month" style="margin-bottom:0;">
-                <button class="btn-main" style="margin-top:0;" onclick="downloadDashboardReport()">Download Excel</button>
+        <div class="sub-tabs-container">
+            <div class="sub-tabs">
+                <button class="sub-tab active" id="rep-btn-dash"   onclick="switchReportsSubTab('dash')">Dashboard Reports</button>
+                <button class="sub-tab"         id="rep-btn-emp"    onclick="switchReportsSubTab('emp')">Employee Reports</button>
             </div>
         </div>
 
-        <div class="card" style="margin-top:16px;">
-            <h4 style="color:var(--success);">Monthly Salary Report</h4>
-            <p>Generates a complete salary statement for all employees — fixed salary structure, attendance counts, and all prorated + statutory calculations as <strong>live Excel formulas</strong> you can edit manually.</p>
-            <div style="margin-top:10px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;font-size:13px;color:var(--text-muted);">
-                📊 Columns: Empl ID · Name · Gross · Basic · HRA · Conv · Spl · Medical · P/Days · Ph/Days · Leaves · Absent · Total Days → Prorated Basic · HRA · Conv · Spl · Medical · GROSS · EPF · ESI · PT · ADV · T.DED · NET · SIGN
+        <!-- ── DASHBOARD REPORTS ── -->
+        <div id="rep-dash-section">
+            <div class="card" style="margin-top:6px;">
+                <h4 style="color:var(--accent);">📊 Monthly Dashboard Report</h4>
+                <p>Attendance matrix for all employees. For the current month, data is cut off at today — future days will not show as absent.</p>
+                <label for="report-dash-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
+                <div style="display:flex;gap:10px;">
+                    <input type="month" id="report-dash-month" style="margin-bottom:0;">
+                    <button class="btn-main" style="margin-top:0;" onclick="downloadDashboardReport()">Download Excel</button>
+                </div>
             </div>
-            <label for="report-salary-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
+
+            <div class="card" style="border-left-color:var(--success);">
+                <h4 style="color:var(--success);">💰 Monthly Salary Report</h4>
+                <p>Complete salary statement with <strong>live Excel formulas</strong> — fixed structure, attendance counts, all prorated &amp; statutory calculations. Edit any cell and totals auto-update.</p>
+                <div style="margin-top:10px;padding:10px 14px;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px;font-size:12px;color:var(--text-muted);line-height:1.65;">
+                    📋 <strong style="color:var(--text-main);">Columns:</strong> Emp ID · Name · Gross · Basic · HRA · Conv · Spl · Medical · P/Days · Ph/Days · Leaves · Absent · Total Days → Prorated BASIC · HRA · Conv · Spl · Medical · GROSS · EPF · ESI · PT · ADV · T.DED · NET · SIGN
+                </div>
+
+                <!-- Employee filter -->
+                <div id="reports-emp-filter">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                        <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;">Employee Filter</span>
+                        <div style="display:flex;gap:7px;">
+                            <button style="font-size:11px;padding:4px 12px;border-radius:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--accent);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;" onclick="salaryFilterAll(true)">Select All</button>
+                            <button style="font-size:11px;padding:4px 12px;border-radius:8px;background:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);color:var(--text-muted);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;" onclick="salaryFilterAll(false)">Deselect All</button>
+                        </div>
+                    </div>
+                    <div id="salary-emp-chips" style="display:flex;flex-wrap:wrap;gap:0;"></div>
+                    <p style="font-size:11.5px;color:var(--text-muted);margin:8px 0 0;">Default: all selected. Tap to toggle individual employees.</p>
+                </div>
+
+                <label for="report-salary-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
+                <div style="display:flex;gap:10px;">
+                    <input type="month" id="report-salary-month" style="margin-bottom:0;">
+                    <button class="btn-main" style="margin-top:0;background:linear-gradient(135deg,var(--success),#059669);" onclick="downloadSalaryReport()">Download Excel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── EMPLOYEE REPORTS ── -->
+        <div id="rep-emp-section" style="display:none;">
+            <div class="card" style="margin-top:6px;border-left-color:var(--warning);">
+                <h4 style="color:var(--warning);">📄 Employee Monthly Payslip</h4>
+                <p>Generate and print a full payslip for any employee for any month.</p>
+            </div>
+            <div class="dropdown-container">
+                <label for="empdash-search-input" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Select Employee</label>
+                <input type="text" id="empdash-search-input" class="dropdown-input" placeholder="Search by name or ID..." autocomplete="off" onclick="openDropdown('empdash-dropdown-list')" oninput="filterDropdownDebounced('empdash-search-input','empdash-dropdown-list','empdash-selected-id')">
+                <input type="hidden" id="empdash-selected-id">
+                <div id="empdash-dropdown-list" class="dropdown-list"></div>
+            </div>
+            <label for="empdash-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Select Month</label>
+            <input type="month" id="empdash-month">
+            <button class="btn-main" style="margin-top:0;" onclick="generateEmpDash()">Generate Payslip</button>
+            <div id="empdash-results" style="margin-top:22px;"></div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW (standalone) -->
+    <div id="view-dashboard" class="view-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="margin:0;color:var(--text-main);">Today's Overview</h3>
+            <button class="icon-btn" onclick="loadDashboard()" title="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-box" style="color:#6366f1;"><div class="stat-icon-wrap" style="background:rgba(99,102,241,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-content"><h3 id="dash-total">--</h3><p>Total Staff</p></div></div>
+            <div class="stat-box" style="color:var(--success);"><div class="stat-icon-wrap" style="background:rgba(16,185,129,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-content"><h3 id="dash-present" style="color:var(--success);">--</h3><p>Present Today</p></div></div>
+            <div class="stat-box" style="color:var(--accent);"><div class="stat-icon-wrap" style="background:rgba(59,130,246,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-content"><h3 id="dash-in" style="color:var(--accent);">--</h3><p>Currently IN</p></div></div>
+            <div class="stat-box" style="color:var(--text-muted);"><div class="stat-icon-wrap" style="background:rgba(100,116,139,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="stat-content"><h3 id="dash-out">--</h3><p>Punched OUT</p></div></div>
+            <div class="stat-box" style="color:var(--danger);"><div class="stat-icon-wrap" style="background:rgba(239,68,68,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="stat-content"><h3 id="dash-leave" style="color:var(--danger);">--</h3><p>On Leave</p></div></div>
+            <div class="stat-box" style="color:var(--warning);"><div class="stat-icon-wrap" style="background:rgba(245,158,11,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-content"><h3 id="dash-late" style="color:var(--warning);">--</h3><p>Late Arrivals</p></div></div>
+        </div>
+        <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:block;">Enrolled Staff (Biometrics)</label>
+            <div id="enrolled-avatars" class="avatar-scroll"></div>
+            <div class="enroll-reminder" id="enroll-reminder">
+                <div class="er-icon">⚠️</div>
+                <div class="er-text">
+                    <strong id="enroll-reminder-count">0 employees not enrolled</strong>
+                    <span>Face recognition will not work for them at the kiosk</span>
+                </div>
+                <button class="er-btn" onclick="navTo('admin');switchInventorySubTab('empl')">Enroll Now</button>
+            </div>
+        </div>
+        <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
+            <label for="export-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:block;">Export Monthly Data (CSV)</label>
             <div style="display:flex;gap:10px;">
-                <input type="month" id="report-salary-month" style="margin-bottom:0;">
-                <button class="btn-main" style="margin-top:0;background:linear-gradient(135deg,var(--success),#059669);" onclick="downloadSalaryReport()">Download Excel</button>
+                <input type="month" id="export-month" style="margin-bottom:0;">
+                <button class="btn-main" style="margin-top:0;" onclick="downloadCSV()">Export CSV</button>
             </div>
         </div>
     </div>
 
-    <!-- ADMIN VIEW -->
+    <!-- INVENTORY VIEW (Leaves · Employees · Users) -->
     <div id="view-admin" class="view-section">
         <div class="sub-tabs-wrapper">
             <button class="sub-scroll-btn hidden" id="sub-scroll-left" onclick="scrollSubTabs(-1)" aria-label="Scroll left">
@@ -643,12 +771,9 @@
             </button>
             <div class="sub-tabs-container" id="sub-tabs-container">
                 <div class="sub-tabs">
-                    <button class="sub-tab active" id="sub-btn-dash"    onclick="switchAdminSubTab('dash')">Dashboard</button>
-                    <button class="sub-tab"         id="sub-btn-reqs"    onclick="switchAdminSubTab('reqs')">Requests</button>
-                    <button class="sub-tab"         id="sub-btn-empdash" onclick="switchAdminSubTab('empdash')">Emp Dash</button>
-                    <button class="sub-tab"         id="sub-btn-leave"   onclick="switchAdminSubTab('leave')">Leaves</button>
-                    <button class="sub-tab"         id="sub-btn-empl"    onclick="switchAdminSubTab('empl')">Employees</button>
-                    <button class="sub-tab"         id="sub-btn-user"    onclick="switchAdminSubTab('user')">Users</button>
+                    <button class="sub-tab active" id="sub-btn-leave" onclick="switchInventorySubTab('leave')">Leaves</button>
+                    <button class="sub-tab"         id="sub-btn-empl"  onclick="switchInventorySubTab('empl')">Employees</button>
+                    <button class="sub-tab hidden-item" id="sub-btn-user" onclick="switchInventorySubTab('user')">Users</button>
                 </div>
             </div>
             <button class="sub-scroll-btn" id="sub-scroll-right" onclick="scrollSubTabs(1)" aria-label="Scroll right">
@@ -656,94 +781,29 @@
             </button>
         </div>
 
-        <!-- DASHBOARD SUB -->
-        <div id="admin-dash-section">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <h3 style="margin:0;color:var(--text-main);">Today's Overview</h3>
-                <button class="icon-btn" onclick="loadDashboard()" title="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-box" style="color:#6366f1;"><div class="stat-icon-wrap" style="background:rgba(99,102,241,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div class="stat-content"><h3 id="dash-total">--</h3><p>Total Staff</p></div></div>
-                <div class="stat-box" style="color:var(--success);"><div class="stat-icon-wrap" style="background:rgba(16,185,129,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-content"><h3 id="dash-present" style="color:var(--success);">--</h3><p>Present Today</p></div></div>
-                <div class="stat-box" style="color:var(--accent);"><div class="stat-icon-wrap" style="background:rgba(59,130,246,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-content"><h3 id="dash-in" style="color:var(--accent);">--</h3><p>Currently IN</p></div></div>
-                <div class="stat-box" style="color:var(--text-muted);"><div class="stat-icon-wrap" style="background:rgba(100,116,139,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div><div class="stat-content"><h3 id="dash-out">--</h3><p>Punched OUT</p></div></div>
-                <div class="stat-box" style="color:var(--danger);"><div class="stat-icon-wrap" style="background:rgba(239,68,68,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="stat-content"><h3 id="dash-leave" style="color:var(--danger);">--</h3><p>On Leave</p></div></div>
-                <div class="stat-box" style="color:var(--warning);"><div class="stat-icon-wrap" style="background:rgba(245,158,11,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-content"><h3 id="dash-late" style="color:var(--warning);">--</h3><p>Late Arrivals</p></div></div>
-            </div>
-            <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:block;">Enrolled Staff (Biometrics)</label>
-                <div id="enrolled-avatars" class="avatar-scroll"></div>
-                <!-- S7: Biometric enrollment reminder -->
-                <div class="enroll-reminder" id="enroll-reminder">
-                    <div class="er-icon">⚠️</div>
-                    <div class="er-text">
-                        <strong id="enroll-reminder-count">0 employees not enrolled</strong>
-                        <span>Face recognition will not work for them at the kiosk</span>
-                    </div>
-                    <button class="er-btn" onclick="switchAdminSubTab('empl');navTo('admin')">Enroll Now</button>
-                </div>
-            </div>
-            <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
-                <label for="export-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:block;">Export Monthly Data</label>
-                <div style="display:flex;gap:10px;">
-                    <input type="month" id="export-month" style="margin-bottom:0;">
-                    <button class="btn-main" style="margin-top:0;" onclick="downloadCSV()">Export CSV</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- REQUESTS SUB -->
-        <div id="admin-reqs-section" style="display:none;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-                <h3 style="margin:0;color:var(--text-main);">Attendance Correction Requests</h3>
-                <button class="icon-btn" onclick="loadAdminRequests()" title="Refresh"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
-            </div>
-            <div id="admin-requests-list" style="margin-top:14px;"></div>
-        </div>
-
-        <!-- EMP DASH SUB -->
-        <div id="admin-empdash-section" style="display:none;">
-            <h3 style="margin-top:0;color:var(--text-main);">Monthly Salary Engine</h3>
-            <label for="empdash-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Month</label>
-            <input type="month" id="empdash-month">
+        <!-- LEAVES SUB -->
+        <div id="admin-leave-section">
+            <h3 style="margin-top:0;color:var(--text-main);">Mark Leave</h3>
             <div class="dropdown-container">
-                <label for="empdash-search" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Employee</label>
-                <input type="text" id="empdash-search" class="dropdown-input" placeholder="Search &amp; tap to select..." autocomplete="off" onclick="openDropdown('empdash-dropdown-list')" oninput="filterDropdownDebounced('empdash-search','empdash-dropdown-list','empdash-id')">
-                <input type="hidden" id="empdash-id">
-                <div id="empdash-dropdown-list" class="dropdown-list"></div>
+                <label for="leave-empl-search-input" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Select Employee</label>
+                <input type="text" id="leave-empl-search-input" class="dropdown-input" placeholder="Search by name or ID..." autocomplete="off" onclick="openDropdown('leave-empl-dropdown-list')" oninput="filterDropdownDebounced('leave-empl-search-input','leave-empl-dropdown-list','leave-empl-selected-id')">
+                <input type="hidden" id="leave-empl-selected-id">
+                <div id="leave-empl-dropdown-list" class="dropdown-list"></div>
             </div>
-            <button class="btn-main" style="margin-top:0;" onclick="generateEmpDash()">Generate Report</button>
-            <div id="empdash-results" style="margin-top:22px;"></div>
-        </div>
-
-        <!-- LEAVE SUB -->
-        <div id="admin-leave-section" style="display:none;">
-            <h3 style="margin-top:0;color:var(--text-main);">Assign Leave</h3>
-            <div class="dropdown-container">
-                <label for="leave-empl-search" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Employee</label>
-                <input type="text" id="leave-empl-search" class="dropdown-input" placeholder="Search &amp; tap to select..." autocomplete="off" onclick="openDropdown('leave-empl-dropdown')" oninput="filterDropdownDebounced('leave-empl-search','leave-empl-dropdown','leave-empl-id')">
-                <input type="hidden" id="leave-empl-id">
-                <div id="leave-empl-dropdown" class="dropdown-list"></div>
-            </div>
-
-            <!-- Date range: From / To -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:130px;">
                     <label for="leave-date-from" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">From Date</label>
                     <input type="date" id="leave-date-from" style="margin:0;" oninput="updateLeaveDayCount()">
                 </div>
-                <div>
+                <div style="flex:1;min-width:130px;">
                     <label for="leave-date-to" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">To Date</label>
                     <input type="date" id="leave-date-to" style="margin:0;" oninput="updateLeaveDayCount()">
                 </div>
             </div>
-
-            <!-- Live preview: day count -->
             <div id="leave-day-preview" style="display:none;margin-top:10px;padding:11px 16px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:12px;font-size:13px;">
                 <span id="leave-day-count-text" style="color:var(--text-main);font-weight:600;"></span>
                 <span style="color:var(--text-muted);font-size:12px;display:block;margin-top:3px;">Sundays and public holidays in the range are automatically skipped.</span>
             </div>
-
             <label for="leave-remarks" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:4px;display:block;">Reason</label>
             <input type="text" id="leave-remarks" placeholder="e.g. Annual Leave, Sick Leave, Medical">
             <button class="btn-main" style="margin-top:0;background:var(--danger);box-shadow:0 4px 14px rgba(239,68,68,0.3);" onclick="submitAdminLeave()">Mark as Leave</button>
@@ -757,12 +817,9 @@
                     <video id="enroll-video" autoplay muted playsinline webkit-playsinline></video>
                     <canvas id="enroll-overlay" style="display:none;"></canvas>
                 </div>
-                <!-- FIX UX: Visual progress bar for face sample capture -->
                 <div id="enroll-progress" style="display:flex;gap:6px;justify-content:center;margin:12px auto 4px;">
-                    <div class="ep-dot" id="ep0"></div>
-                    <div class="ep-dot" id="ep1"></div>
-                    <div class="ep-dot" id="ep2"></div>
-                    <div class="ep-dot" id="ep3"></div>
+                    <div class="ep-dot" id="ep0"></div><div class="ep-dot" id="ep1"></div>
+                    <div class="ep-dot" id="ep2"></div><div class="ep-dot" id="ep3"></div>
                     <div class="ep-dot" id="ep4"></div>
                 </div>
                 <div id="enroll-status" class="status-loading" style="display:block;margin-top:10px;">Position face in camera...</div>
@@ -778,19 +835,17 @@
             </div>
         </div>
 
-        <!-- USERS SUB -->
+        <!-- USERS SUB (Admin only) -->
         <div id="admin-user-section" style="display:none;">
             <h3 style="margin-top:0;color:var(--text-main);">App Users</h3>
             <div style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.18);border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
-                <strong style="color:var(--accent);">Role guide:</strong> &nbsp;Admin — full access &nbsp;|&nbsp; HR — no user management &nbsp;|&nbsp; Standby — kiosk only &nbsp;|&nbsp; Employee — own payslip &amp; history
+                <strong style="color:var(--accent);">Role guide:</strong> &nbsp;Admin — full access &nbsp;|&nbsp; HR — no user management &nbsp;|&nbsp; Security — entry &amp; history &nbsp;|&nbsp; Standby — kiosk only &nbsp;|&nbsp; Employee — own payslip &amp; history
             </div>
             <button class="btn-main" style="margin-top:0;margin-bottom:14px;background:var(--success);box-shadow:0 4px 14px rgba(16,185,129,0.3);" onclick="openUserModal()">+ Add New User</button>
             <input type="text" id="search-admin-user" placeholder="🔍 Search users..." onkeyup="filterAdminCards('admin-users-list',this.value)">
             <div id="admin-users-list" style="margin-top:14px;"></div>
         </div>
-    </div>
-
-</div><!-- /app-container -->
+    </div><!-- /view-admin -->
 
 <nav id="mobile-bottom-nav">
     <div class="mob-nav-item active" id="mnav-entry" onclick="navTo('entry')">
@@ -805,12 +860,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span>Payslip</span>
     </div>
+    <div class="mob-nav-item hidden-mob" id="mnav-dashboard" onclick="navTo('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Dashboard</span>
+    </div>
     <div class="mob-nav-item hidden-mob" id="mnav-reports" onclick="navTo('reports')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         <span>Reports</span>
     </div>
     <div class="mob-nav-item hidden-mob" id="mnav-admin" onclick="navTo('admin')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
         <span>Inventory</span>
     </div>
 </nav>
@@ -1262,22 +1321,117 @@
 
     // ── NAVIGATION ──
     // MOD-03: Renamed 'Inventory' → 'Admin Panel' — the label was misleading in an HR app
-    const PAGE_TITLES = { entry:'Attendance Entry', history:'History', payslip:'My Payslip', reports:'Dashboard Reports', admin:'Admin Panel', kiosk:'Kiosk' };
+    const PAGE_TITLES = {
+        entry:     'Attendance Entry',
+        history:   'History',
+        payslip:   'My Payslip',
+        reports:   'Reports',
+        dashboard: 'Dashboard',
+        admin:     'Inventory',
+        kiosk:     'Kiosk'
+    };
 
     function navTo(tabId) {
         document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-        if(document.getElementById('view-' + tabId)) document.getElementById('view-' + tabId).classList.add('active');
+        const view = document.getElementById('view-' + tabId);
+        if (view) view.classList.add('active');
         document.querySelectorAll('.sidebar-item[id^="snav-"]').forEach(i => i.classList.remove('active'));
-        if(document.getElementById('snav-' + tabId)) document.getElementById('snav-' + tabId).classList.add('active');
+        const sn = document.getElementById('snav-' + tabId);
+        if (sn) sn.classList.add('active');
         document.querySelectorAll('.mob-nav-item[id^="mnav-"]').forEach(i => i.classList.remove('active'));
-        if(document.getElementById('mnav-' + tabId)) document.getElementById('mnav-' + tabId).classList.add('active');
+        const mn = document.getElementById('mnav-' + tabId);
+        if (mn) mn.classList.add('active');
         const titleEl = document.getElementById('topbar-page-title');
         if (titleEl) titleEl.innerText = PAGE_TITLES[tabId] || '';
+
+        // Load data for the activated section
+        if (tabId === 'dashboard')  loadDashboard();
         if (tabId === 'admin') {
-            const activeSub = document.querySelector('.sub-tab.active');
-            if (activeSub) switchAdminSubTab(activeSub.id.replace('sub-btn-', ''));
-            else switchAdminSubTab('dash');
+            const activeSub = document.querySelector('#view-admin .sub-tab.active');
+            const subName   = activeSub ? activeSub.id.replace('sub-btn-','') : 'leave';
+            switchInventorySubTab(subName);
         }
+        if (tabId === 'reports') {
+            buildSalaryEmployeeFilter();
+        }
+        // Refresh bell count on every nav
+        if (currentUser.role === 'Admin' || currentUser.role === 'HR') fetchBellCount();
+    }
+
+    // ── ROLE PERMISSIONS ──
+    function applyRolePermissions() {
+        const r          = currentUser.role;
+        const isAdmin    = r === 'Admin';
+        const isHR       = r === 'HR';
+        const isEmployee = r === 'Employee';
+        const isStandby  = r === 'Standby';
+        const isSecurity = r === 'Security-1' || r === 'Security-2';
+        const isAdminHR  = isAdmin || isHR;
+
+        // Set sidebar avatar / username
+        const initials = currentUser.username ? currentUser.username.substring(0,2).toUpperCase() : '--';
+        const sideAv   = document.getElementById('sidebar-avatar-initials');
+        const sideUn   = document.getElementById('sidebar-username');
+        const sideRl   = document.getElementById('sidebar-role');
+        const dispUsr  = document.getElementById('display-user');
+        if (sideAv)  sideAv.innerText  = initials;
+        if (sideUn)  sideUn.innerText  = currentUser.username;
+        if (sideRl)  sideRl.innerText  = r;
+        if (dispUsr) dispUsr.innerText = `${currentUser.username} (${r})`;
+
+        // Sidebar visibility
+        ['snav-payslip','snav-dashboard','snav-reports','snav-admin'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        if (isEmployee)             document.getElementById('snav-payslip')  && (document.getElementById('snav-payslip').style.display  = '');
+        if (isAdminHR) {
+            ['snav-dashboard','snav-reports','snav-admin'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = '';
+            });
+            const sec = document.getElementById('snav-admin-section');
+            if (sec) sec.style.display = '';
+        }
+
+        // Mobile nav visibility
+        ['mnav-payslip','mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        if (isEmployee)  { const el = document.getElementById('mnav-payslip');   if(el) el.style.display = ''; }
+        if (isAdminHR)   { ['mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; }); }
+
+        // Bell (Admin & HR only)
+        ['bell-btn-desktop','bell-btn-mobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = isAdminHR ? 'flex' : 'none';
+        });
+
+        // Inventory: Users sub-tab — Admin only
+        const userTabBtn = document.getElementById('sub-btn-user');
+        if (userTabBtn) userTabBtn.style.display = isAdmin ? '' : 'none';
+
+        // History employee search — hide for Employee role (they only see own)
+        const hesc = document.getElementById('hist-empl-search-container');
+        if (hesc) hesc.style.display = isEmployee ? 'none' : 'block';
+        const leaveBtn = document.getElementById('btn-leave');
+        if (leaveBtn) leaveBtn.style.display = isEmployee ? 'none' : 'block';
+
+        // Kiosk: Standby only — lock to kiosk, hide nav
+        if (isStandby) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            const kv = document.getElementById('view-kiosk');
+            if (kv) kv.classList.add('active');
+            const mbn = document.getElementById('mobile-bottom-nav');
+            if (mbn) mbn.style.display = 'none';
+            return;
+        }
+
+        // Default landing page per role
+        if (isEmployee) { navTo('history');   return; }
+        if (isSecurity) { navTo('entry');     return; }
+        navTo('dashboard');
     }
 
     function updateLiveClock() {
@@ -1285,75 +1439,6 @@
         const str = now.toLocaleDateString('en-IN', { weekday:'short', day:'2-digit', month:'short', year:'numeric' }) + " | " + now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
         if(document.getElementById('live-clock')) document.getElementById('live-clock').innerText = str;
         if(document.getElementById('topbar-clock')) document.getElementById('topbar-clock').innerText = str;
-    }
-
-    // ── ROLE PERMISSIONS ──
-    function applyRolePermissions() {
-        const r = currentUser.role;
-        const sRepSection   = document.getElementById('snav-reports-section');
-        const sRep          = document.getElementById('snav-reports');
-        const mRep          = document.getElementById('mnav-reports');
-        const sAdminSection = document.getElementById('snav-admin-section');
-        const sAdmin        = document.getElementById('snav-admin');
-        const sPayslip      = document.getElementById('snav-payslip');
-        const sEntry        = document.getElementById('snav-entry');
-        const mAdmin        = document.getElementById('mnav-admin');
-        const mPayslip      = document.getElementById('mnav-payslip');
-        const mEntry        = document.getElementById('mnav-entry');
-
-        const initials = currentUser.username ? currentUser.username.substring(0,2).toUpperCase() : '--';
-        if(document.getElementById('sidebar-avatar-initials')) document.getElementById('sidebar-avatar-initials').innerText = initials;
-        if(document.getElementById('sidebar-username')) document.getElementById('sidebar-username').innerText = currentUser.username;
-        if(document.getElementById('sidebar-role')) document.getElementById('sidebar-role').innerText = r;
-        if(document.getElementById('display-user')) document.getElementById('display-user').innerText = `${currentUser.username} (${r})`;
-
-        if (r === 'Standby') {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-kiosk').classList.add('active');
-            document.getElementById('mobile-bottom-nav').style.display = 'none';
-            if (sEntry)   sEntry.classList.add('hidden-item');
-            if (sAdmin)   sAdmin.classList.add('hidden-item');
-            if (sPayslip) sPayslip.classList.add('hidden-item');
-            if (sAdminSection) sAdminSection.style.display = 'none';
-            if (sRep) sRep.classList.add('hidden-item');
-            if (mRep) mRep.classList.add('hidden-mob');
-            if (sRepSection) sRepSection.style.display = 'none';
-        } else if (r === 'Employee') {
-            document.getElementById('hist-empl-search-container').style.display = 'none';
-            if (sEntry)   sEntry.classList.add('hidden-item');
-            if (sAdmin)   sAdmin.classList.add('hidden-item');
-            if (mEntry)   mEntry.classList.add('hidden-mob');
-            if (mAdmin)   mAdmin.classList.add('hidden-mob');
-            if (sAdminSection) sAdminSection.style.display = 'none';
-            if (sPayslip) sPayslip.classList.remove('hidden-item');
-            if (mPayslip) mPayslip.classList.remove('hidden-mob');
-            if (sRep) sRep.classList.add('hidden-item');
-            if (mRep) mRep.classList.add('hidden-mob');
-            if (sRepSection) sRepSection.style.display = 'none';
-            navTo('payslip');
-        } else {
-            document.getElementById('hist-empl-search-container').style.display = 'block';
-            document.getElementById('btn-leave').style.display = 'block';
-            if (sEntry)   sEntry.classList.remove('hidden-item');
-            if (sPayslip) sPayslip.classList.add('hidden-item');
-            if (mPayslip) mPayslip.classList.add('hidden-mob');
-            if (r === 'Admin' || r === 'HR') {
-                if (sAdmin)   sAdmin.classList.remove('hidden-item');
-                if (mAdmin)   mAdmin.classList.remove('hidden-mob');
-                if (sAdminSection) sAdminSection.style.display = 'block';
-                if (sRep) sRep.classList.remove('hidden-item');
-                if (mRep) mRep.classList.remove('hidden-mob');
-                if (sRepSection) sRepSection.style.display = 'block';
-            } else {
-                if (sAdmin)   sAdmin.classList.add('hidden-item');
-                if (mAdmin)   mAdmin.classList.add('hidden-mob');
-                if (sAdminSection) sAdminSection.style.display = 'none';
-                if (sRep) sRep.classList.add('hidden-item');
-                if (mRep) mRep.classList.add('hidden-mob');
-                if (sRepSection) sRepSection.style.display = 'none';
-            }
-            navTo('entry');
-        }
     }
 
     // ── APP START & LOGIN ──
@@ -1518,11 +1603,12 @@
                     const sub = document.querySelector('.sub-tab.active');
                     if (sub) {
                         const sId = sub.id.replace('sub-btn-', '');
-                        if (sId === 'dash')    loadDashboard();
-                        else if (sId === 'empl') loadAdminEmplData();
+                        if      (sId === 'empl') loadAdminEmplData();
                         else if (sId === 'user') loadAdminUsersData();
-                        else if (sId === 'reqs') loadAdminRequests();
                     }
+                }
+                else if (activeTab && activeTab.id === 'view-dashboard') {
+                    loadDashboard();
                 }
                 else if (activeTab.id === 'view-payslip') {
                     if (document.getElementById('mypayslip-month').value) generateMyPayslip();
@@ -1849,23 +1935,29 @@
     function populateDropdowns(data) {
         const le = document.getElementById('empl-dropdown-list');
         const lh = document.getElementById('hist-empl-dropdown-list');
-        const ll = document.getElementById('leave-empl-dropdown');
-        const ld = document.getElementById('empdash-dropdown-list');
-        let sLE='', sLH='', sLL='', sLD='';
+        const ll = document.getElementById('leave-empl-dropdown-list');  // updated ID
+        let sLE='', sLH='', sLL='';
         data.forEach(e => {
             const display = `${e.id} - ${e.name}`;
             const safeId  = safeStr(String(e.id));
             const safeTxt = safeStr(display);
             const mk = (a) => `<div class="dropdown-item" data-id="${safeId}" data-text="${safeTxt}" data-action="${a}">${safeTxt}</div>`;
-            sLE += mk('entry'); sLH += mk('hist'); sLL += mk('leave'); sLD += mk('empdash');
+            sLE += mk('entry'); sLH += mk('hist'); sLL += mk('leave');
         });
-        le.innerHTML = sLE; lh.innerHTML = sLH; ll.innerHTML = sLL; ld.innerHTML = sLD;
+        if (le) le.innerHTML = sLE;
+        if (lh) lh.innerHTML = sLH;
+        if (ll) ll.innerHTML = sLL;
+        // Employee Reports (empdash) dropdown is built lazily via populateEmpdashDropdown()
     }
 
-    document.getElementById('empl-dropdown-list').addEventListener('click',     e => { const i=e.target.closest('.dropdown-item'); if(i) chooseEntry(i.dataset.id,i.dataset.text); });
-    document.getElementById('hist-empl-dropdown-list').addEventListener('click', e => { const i=e.target.closest('.dropdown-item'); if(i) chooseHist(i.dataset.id,i.dataset.text); });
-    document.getElementById('leave-empl-dropdown').addEventListener('click',     e => { const i=e.target.closest('.dropdown-item'); if(i) chooseLeave(i.dataset.id,i.dataset.text); });
-    document.getElementById('empdash-dropdown-list').addEventListener('click',   e => { const i=e.target.closest('.dropdown-item'); if(i) chooseEmpDash(i.dataset.id,i.dataset.text); });
+    document.getElementById('empl-dropdown-list').addEventListener('click',          e => { const i=e.target.closest('.dropdown-item'); if(i) chooseEntry(i.dataset.id,i.dataset.text); });
+    document.getElementById('hist-empl-dropdown-list').addEventListener('click',     e => { const i=e.target.closest('.dropdown-item'); if(i) chooseHist(i.dataset.id,i.dataset.text); });
+    document.addEventListener('click', e => {
+        const ll = document.getElementById('leave-empl-dropdown-list');
+        if (ll) { const i=e.target.closest('#leave-empl-dropdown-list .dropdown-item'); if(i) chooseLeave(i.dataset.id,i.dataset.text); }
+        const ld = document.getElementById('empdash-dropdown-list');
+        if (ld) { const i=e.target.closest('#empdash-dropdown-list .dropdown-item');   if(i) chooseEmpDash(i.dataset.id,i.dataset.text); }
+    });
 
     function chooseEntry(id, text) {
         document.getElementById('empl-search-input').value = text;
@@ -1879,8 +1971,8 @@
         fetchLiveStatus(id);
     }
     function chooseHist(id, text)    { document.getElementById('hist-empl-search-input').value=text; document.getElementById('hist-empl-selected-id').value=id; document.getElementById('hist-empl-dropdown-list').style.display='none'; }
-    function chooseLeave(id, text)   { document.getElementById('leave-empl-search').value=text;      document.getElementById('leave-empl-id').value=id;          document.getElementById('leave-empl-dropdown').style.display='none'; }
-    function chooseEmpDash(id, text) { document.getElementById('empdash-search').value=text;         document.getElementById('empdash-id').value=id;              document.getElementById('empdash-dropdown-list').style.display='none'; }
+    function chooseLeave(id, text)   { document.getElementById('leave-empl-search-input').value=text; document.getElementById('leave-empl-selected-id').value=id; document.getElementById('leave-empl-dropdown-list').style.display='none'; }
+    function chooseEmpDash(id, text) { document.getElementById('empdash-search-input').value=text;   document.getElementById('empdash-selected-id').value=id;    document.getElementById('empdash-dropdown-list').style.display='none'; }
 
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.dropdown-container')) document.querySelectorAll('.dropdown-list').forEach(l => l.style.display='none');
@@ -2022,16 +2114,158 @@
     }
 
     // ── ADMIN SUB-TABS ──
-    function switchAdminSubTab(subTabName) {
+    // ── INVENTORY SUB-TABS (Leaves · Employees · Users) ──────────────────────
+    function switchInventorySubTab(subTabName) {
         if (subTabName === 'user' && currentUser.role !== 'Admin') return;
-        document.querySelectorAll('.sub-tab').forEach(e => e.classList.remove('active'));
-        document.getElementById('sub-btn-'+subTabName).classList.add('active');
-        ['dash','reqs','empdash','leave','empl','user'].forEach(s => document.getElementById('admin-'+s+'-section').style.display='none');
-        document.getElementById('admin-'+subTabName+'-section').style.display = 'block';
-        if      (subTabName === 'dash')   loadDashboard();
-        else if (subTabName === 'reqs')   loadAdminRequests();
-        else if (subTabName === 'empl')   loadAdminEmplData();
-        else if (subTabName === 'user')   loadAdminUsersData();
+        ['leave','empl','user'].forEach(t => {
+            const sec = document.getElementById('admin-' + t + '-section');
+            const btn = document.getElementById('sub-btn-' + t);
+            if (sec) sec.style.display = (t === subTabName) ? 'block' : 'none';
+            if (btn) btn.classList.toggle('active', t === subTabName);
+        });
+        if (subTabName === 'empl') loadAdminEmplData();
+        if (subTabName === 'user') loadAdminUsersData();
+    }
+
+    // Keep legacy alias so any stale references still work
+    function switchAdminSubTab(n) { switchInventorySubTab(n); }
+
+    // ── REPORTS SUB-TABS (Dashboard Reports · Employee Reports) ──────────────
+    function switchReportsSubTab(subTabName) {
+        document.getElementById('rep-dash-section').style.display = subTabName === 'dash' ? 'block' : 'none';
+        document.getElementById('rep-emp-section').style.display  = subTabName === 'emp'  ? 'block' : 'none';
+        document.getElementById('rep-btn-dash').classList.toggle('active', subTabName === 'dash');
+        document.getElementById('rep-btn-emp').classList.toggle('active',  subTabName === 'emp');
+        if (subTabName === 'emp') populateEmpdashDropdown();
+    }
+
+    // ── BELL NOTIFICATION ─────────────────────────────────────────────────────
+    let bellPanelOpen   = false;
+    let pendingReqsData = [];
+
+    async function fetchBellCount() {
+        try {
+            const res = await callGoogleAPI({ action: 'getPendingCorrections' });
+            if (res.status === 'success') {
+                pendingReqsData = res.data || [];
+                const count = pendingReqsData.length;
+                ['bell-badge-desktop','bell-badge-mobile'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.innerText = count > 9 ? '9+' : count;
+                    el.style.display = count > 0 ? 'flex' : 'none';
+                });
+                ['bell-btn-desktop','bell-btn-mobile'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.toggle('has-requests', count > 0);
+                });
+                if (bellPanelOpen) renderBellPanel();
+            }
+        } catch(e) {}
+    }
+
+    function toggleBellPanel() {
+        const panel = document.getElementById('bell-panel');
+        bellPanelOpen = !bellPanelOpen;
+        panel.classList.toggle('visible', bellPanelOpen);
+        if (bellPanelOpen) {
+            renderBellPanel();
+            setTimeout(() => {
+                document.addEventListener('click', closeBellOnOutside, { once:true });
+            }, 100);
+        }
+    }
+
+    function closeBellOnOutside(e) {
+        const panel = document.getElementById('bell-panel');
+        let inside  = panel.contains(e.target);
+        document.querySelectorAll('.bell-btn').forEach(b => { if (b.contains(e.target)) inside = true; });
+        if (!inside) { bellPanelOpen = false; panel.classList.remove('visible'); }
+    }
+
+    function renderBellPanel() {
+        const body = document.getElementById('bell-panel-body');
+        if (!pendingReqsData || pendingReqsData.length === 0) {
+            body.innerHTML = '<div class="bell-empty">🎉 No pending correction requests</div>';
+            return;
+        }
+        body.innerHTML = pendingReqsData.map(req => `
+            <div class="bell-req-card">
+                <div class="bell-req-name">${safeStr(req.emplName)} <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(ID: ${safeStr(req.emplId)})</span></div>
+                <div class="bell-req-detail">${safeStr(req.details)}<br><span style="font-size:11px;opacity:0.7;">Submitted: ${safeStr(req.date)}</span></div>
+                <button class="bell-req-resolve" onclick="resolveBellReq(${req.row})">✓ Mark Resolved</button>
+            </div>
+        `).join('');
+    }
+
+    async function resolveBellReq(row) {
+        const res = await callGoogleAPI({ action:'resolveCorrection', row, user: currentUser.username });
+        if (res.status === 'success') {
+            showToast('Request resolved ✅');
+            pendingReqsData = pendingReqsData.filter(r => r.row !== row);
+            renderBellPanel();
+            const count = pendingReqsData.length;
+            ['bell-badge-desktop','bell-badge-mobile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerText = count > 9 ? '9+' : count;
+                el.style.display = count > 0 ? 'flex' : 'none';
+            });
+            ['bell-btn-desktop','bell-btn-mobile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('has-requests', count > 0);
+            });
+        } else { showToast(res.message, 'error'); }
+    }
+
+    // ── SALARY REPORT EMPLOYEE FILTER ─────────────────────────────────────────
+    let salarySelectedIds = new Set();
+
+    function buildSalaryEmployeeFilter() {
+        if (!employeeList || employeeList.length === 0) return;
+        const chipsEl = document.getElementById('salary-emp-chips');
+        if (!chipsEl || chipsEl.children.length === employeeList.length) return;
+        salarySelectedIds = new Set(employeeList.map(e => e.id.toString()));
+        chipsEl.innerHTML = employeeList.map(emp => `
+            <label class="emp-filter-chip selected" id="chip-${emp.id}" onclick="toggleSalaryChip('${emp.id}', this)">
+                <input type="checkbox" checked>
+                ${emp.id} — ${safeStr(emp.name)}
+            </label>
+        `).join('');
+    }
+
+    function toggleSalaryChip(id, el) {
+        if (salarySelectedIds.has(id.toString())) { salarySelectedIds.delete(id.toString()); el.classList.remove('selected'); }
+        else { salarySelectedIds.add(id.toString()); el.classList.add('selected'); }
+    }
+
+    function salaryFilterAll(select) {
+        if (!employeeList) return;
+        employeeList.forEach(emp => {
+            const chip = document.getElementById('chip-' + emp.id);
+            if (!chip) return;
+            if (select) { salarySelectedIds.add(emp.id.toString()); chip.classList.add('selected'); }
+            else        { salarySelectedIds.delete(emp.id.toString()); chip.classList.remove('selected'); }
+        });
+    }
+
+    function populateEmpdashDropdown() {
+        if (!employeeList) return;
+        const list  = document.getElementById('empdash-dropdown-list');
+        const input = document.getElementById('empdash-search-input');
+        if (!list || list.children.length > 0) return;
+        employeeList.forEach(emp => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.innerText = `${emp.name} (ID: ${emp.id})`;
+            item.onclick = () => {
+                document.getElementById('empdash-selected-id').value = emp.id;
+                input.value = `${emp.name} (ID: ${emp.id})`;
+                list.style.display = 'none';
+            };
+            list.appendChild(item);
+        });
     }
 
     async function loadDashboard() {
@@ -2277,7 +2511,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 
     async function generateEmpDash() {
         const m = document.getElementById('empdash-month').value;
-        const id = document.getElementById('empdash-id').value;
+        const id = document.getElementById('empdash-selected-id').value;
         if (!m || !id) { document.getElementById('empdash-results').innerHTML='<p style="color:var(--danger);text-align:center;">Select employee and month.</p>'; return; }
         document.getElementById('empdash-results').innerHTML = '<p style="color:var(--text-muted);text-align:center;">Fetching payroll data...</p>';
         showLoader('payslip');
@@ -2447,7 +2681,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     async function submitAdminLeave() {
-        const id       = document.getElementById('leave-empl-id').value;
+        const id       = document.getElementById('leave-empl-selected-id').value;
         const dateFrom = document.getElementById('leave-date-from').value;
         const dateTo   = document.getElementById('leave-date-to').value;
         const rem      = document.getElementById('leave-remarks').value;
@@ -2698,10 +2932,12 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         else if (activeMainTab === 'view-history') { title='📜 History';             html='<ul><li>Filter by month, date, or employee name/ID. Admin/HR can edit records. Employees can submit Correction Requests.</li></ul>'; }
         else if (activeMainTab === 'view-admin') {
             const activeSubTab = document.querySelector('.sub-tab.active');
-            const subId = activeSubTab ? activeSubTab.id : 'sub-btn-dash';
-            if      (subId === 'sub-btn-dash')    { title='📊 Dashboard';        html='<ul><li>Live attendance overview. Export a month\'s data to CSV for payroll.</li></ul>'; }
-            else if (subId === 'sub-btn-reqs')    { title='📬 Requests';         html='<ul><li>Review and resolve Attendance Correction requests submitted by employees.</li></ul>'; }
-            else if (subId === 'sub-btn-empdash') { title='🧑‍💼 Salary Engine'; html='<ul><li>Generate full payroll reports with OT, deductions, and net pay.</li></ul>'; }
+            const subId = activeSubTab ? activeSubTab.id : 'sub-btn-leave';
+            if      (subId === 'sub-btn-leave')  { title='📅 Leaves';         html='<ul><li>Mark single or bulk leave (EL or LOP) for any employee. Sundays and public holidays are automatically skipped.</li></ul>'; }
+            else if (subId === 'sub-btn-empl')   { title='👥 Employees';      html='<ul><li>Add, edit or delete employees. Enroll face data for kiosk recognition.</li></ul>'; }
+            else if (subId === 'sub-btn-user')   { title='🔐 Users';          html='<ul><li>Manage app login accounts. Admin only. Set Empl ID (column E) for Employee-role logins.</li></ul>'; }
+            else if (subId === 'rep-btn-dash')   { title='📊 Dashboard Reports'; html='<ul><li>Monthly Dashboard (attendance matrix) and Monthly Salary Report with live Excel formulas.</li></ul>'; }
+            else if (subId === 'rep-btn-emp')    { title='📄 Employee Reports';  html='<ul><li>Generate and print a payslip for any employee for any month.</li></ul>'; }
             else if (subId === 'sub-btn-leave')   { title='⛱️ Leave';            html='<ul><li>Assign leave for any date. Deducts 1 day from balance automatically.</li></ul>'; }
             else if (subId === 'sub-btn-empl')    { title='👥 Employees';        html='<ul><li>Add/edit employees and salary. Click Enroll Face to register AI recognition.</li></ul>'; }
             else if (subId === 'sub-btn-user')    { title='🔐 App Users';        html='<ul><li>Create logins. Select role — Admin, HR, Standby, or Employee.</li></ul>'; }
@@ -2864,297 +3100,210 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         showToast('Excel Downloaded Successfully');
     }
 
-    // ── EXPORT MONTHLY SALARY REPORT (with live Excel formulas) ──────────────
-    // Column map:
-    //   A=EmplID  B=Name  C=P.M(Gross)  D=Basic  E=HRA  F=Conv  G=Spl  H=Medical
-    //   I=P/Days  J=Ph/Days  K=Leaves  L=Absent  M=TotalDays
-    //   N=Basic(pro)  O=HRA(pro)  P=Conv(pro)  Q=Spl(pro)  R=Medical(pro)
-    //   S=GROSS  T=EPF  U=ESI  V=PT  W=ADV  X=T.DED  Y=NET  Z=SIGN
-    //
-    // Columns N–Y contain live Excel formulas so HR can adjust values manually
-    // and all totals recalculate automatically.
+    // ── EXPORT MONTHLY SALARY REPORT ─────────────────────────────────────────
+    // PERF FIX: Previous version used eachCell({includeEmpty:true}) on every
+    // data row (26 cols × 35 employees = 910 per-cell style objects) causing a
+    // 15-minute browser hang. Now: column-level styles set ONCE, row values
+    // added in bulk, formulas assigned per-cell only where needed.
     async function downloadSalaryReport() {
         const m = document.getElementById('report-salary-month').value;
         if (!m) { showToast('Please select a month.', 'warn'); return; }
-        showLoader('excel');
 
-        const res = await callGoogleAPI({ action:'exportSalaryReport', month:m });
-        if (res.status === 'error') { hideLoader(); showToast(res.message, 'error'); return; }
-
-        const [year, monthNum] = m.split('-');
-        const monthName  = new Date(year, parseInt(monthNum)-1, 1).toLocaleString('default', { month:'long' });
-        const asOfSuffix = res.cutoffInfo ? ` — As of ${res.cutoffInfo}` : '';
-        const fileName   = `${monthName} ${year} - Monthly Salary Report${asOfSuffix}.xlsx`;
-
-        const workbook = new ExcelJS.Workbook();
-        const sheet    = workbook.addWorksheet('Salary Report');
-
-        // ── Common border helper ───────────────────────────────────────────────
-        const border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-        const thickBorder = {
-            top:{style:'medium'}, left:{style:'medium'},
-            bottom:{style:'medium'}, right:{style:'medium'}
-        };
-
-        // ── Row 1: Company / report title ─────────────────────────────────────
-        sheet.addRow([`CAPCO CAPACITOR — ${monthName.toUpperCase()} ${year} MONTHLY SALARY STATEMENT${asOfSuffix}`]);
-        sheet.mergeCells('A1:Z1');
-        sheet.getRow(1).height = 28;
-        sheet.getRow(1).getCell(1).style = {
-            font:      { bold:true, size:13, color:{ argb:'FFFFFFFF' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0F172A' } },
-            alignment: { horizontal:'center', vertical:'middle' }
-        };
-
-        // ── Row 2: Group header (Fixed salary group | Attendance | Calculated group) ──
-        sheet.addRow([]);   // placeholder — we fill via mergeCells below
-        sheet.getRow(2).height = 20;
-
-        // Group: Fixed Salary Structure (A–H)
-        sheet.mergeCells('A2:H2');
-        sheet.getRow(2).getCell(1).value = 'EMPLOYEE & FIXED SALARY STRUCTURE';
-        sheet.getRow(2).getCell(1).style = {
-            font:      { bold:true, size:10, color:{ argb:'FF1E3A5F' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFdbeafe' } },
-            alignment: { horizontal:'center', vertical:'middle' },
-            border
-        };
-
-        // Group: Attendance (I–M)
-        sheet.mergeCells('I2:M2');
-        sheet.getRow(2).getCell(9).value = 'ATTENDANCE';
-        sheet.getRow(2).getCell(9).style = {
-            font:      { bold:true, size:10, color:{ argb:'FF14532D' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFdcfce7' } },
-            alignment: { horizontal:'center', vertical:'middle' },
-            border
-        };
-
-        // Group: Prorated Earnings (N–S)
-        sheet.mergeCells('N2:S2');
-        sheet.getRow(2).getCell(14).value = 'PRORATED EARNINGS (FORMULA)';
-        sheet.getRow(2).getCell(14).style = {
-            font:      { bold:true, size:10, color:{ argb:'FF1E3A5F' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFe0f2fe' } },
-            alignment: { horizontal:'center', vertical:'middle' },
-            border
-        };
-
-        // Group: Deductions (T–X)
-        sheet.mergeCells('T2:X2');
-        sheet.getRow(2).getCell(20).value = 'DEDUCTIONS (FORMULA)';
-        sheet.getRow(2).getCell(20).style = {
-            font:      { bold:true, size:10, color:{ argb:'FF7F1D1D' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFffe4e6' } },
-            alignment: { horizontal:'center', vertical:'middle' },
-            border
-        };
-
-        // Group: NET & SIGN (Y–Z)
-        sheet.mergeCells('Y2:Z2');
-        sheet.getRow(2).getCell(25).value = 'NET PAY';
-        sheet.getRow(2).getCell(25).style = {
-            font:      { bold:true, size:10, color:{ argb:'FF14532D' } },
-            fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FFbbf7d0' } },
-            alignment: { horizontal:'center', vertical:'middle' },
-            border
-        };
-
-        // ── Row 3: Column sub-headers ─────────────────────────────────────────
-        const colHeaders = [
-            'EMP ID','NAME',
-            'P.M\n(Gross)','BASIC','HRA','Conv.\nAllow','Spl\nAllow','Medical',
-            'P/Days','Ph/Days','Leaves\nAvailed','Absent\nDays','TOTAL\nDays',
-            'BASIC','HRA','Conv.\nAllow','Spl\nAllow','Medical','GROSS',
-            'E.P.F','E.S.I','P.T','ADV.','T.DED.','NET','SIGN'
-        ];
-        sheet.addRow(colHeaders);
-        sheet.getRow(3).height = 32;
-
-        // Style column sub-headers with group colours
-        const colFills = [
-            'FFdbeafe','FFdbeafe',                                                // A-B: identity
-            'FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe','FFdbeafe',    // C-H: fixed salary
-            'FFdcfce7','FFdcfce7','FFdcfce7','FFdcfce7','FFdcfce7',              // I-M: attendance
-            'FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe','FFe0f2fe',   // N-S: prorated
-            'FFffe4e6','FFffe4e6','FFffe4e6','FFffe4e6','FFffe4e6',               // T-X: deductions
-            'FFbbf7d0','FFfefce8'                                                 // Y: net  Z: sign
-        ];
-        const colTextColors = [
-            'FF1e3a5f','FF1e3a5f',
-            'FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f',
-            'FF14532d','FF14532d','FF14532d','FF14532d','FF14532d',
-            'FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f','FF1e3a5f',
-            'FF7f1d1d','FF7f1d1d','FF7f1d1d','FF7f1d1d','FF7f1d1d',
-            'FF14532d','FF713f12'
-        ];
-        sheet.getRow(3).eachCell((cell, ci) => {
-            cell.style = {
-                font:      { bold:true, size:9, color:{ argb: colTextColors[ci-1] || 'FF1e3a5f' } },
-                fill:      { type:'pattern', pattern:'solid', fgColor:{ argb: colFills[ci-1] || 'FFf3f4f6' } },
-                alignment: { horizontal:'center', vertical:'middle', wrapText:true },
-                border
-            };
-        });
-
-        // ── Rows 4+: Data rows with live formulas ─────────────────────────────
-        const DATA_START_ROW = 4;
-        res.rows.forEach((emp, idx) => {
-            const r = DATA_START_ROW + idx;   // Excel row number for this employee
-
-            const dataRow = sheet.addRow([
-                emp.id,          // A — Empl ID
-                emp.name,        // B — Name
-                emp.gross,       // C — P.M (Gross)
-                emp.basic,       // D — Basic
-                emp.hra,         // E — HRA
-                emp.conv,        // F — Conv Allow
-                emp.spl,         // G — Spl Allow
-                emp.med,         // H — Medical
-                emp.pDays,       // I — P/Days
-                emp.phDays,      // J — Ph/Days
-                emp.leavesAvailed, // K — Leaves Availed
-                emp.absentDays,  // L — Absent Days
-                emp.totalDays,   // M — Total Days in Month
-                // ── N: Prorated Basic ──────────────────────────────────────
-                { formula: `=ROUND(D${r}*(I${r}+J${r})/M${r},0)` },
-                // ── O: Prorated HRA ────────────────────────────────────────
-                { formula: `=ROUND(E${r}*(I${r}+J${r})/M${r},0)` },
-                // ── P: Prorated Conv ───────────────────────────────────────
-                { formula: `=ROUND(F${r}*(I${r}+J${r})/M${r},0)` },
-                // ── Q: Prorated Spl Allow ──────────────────────────────────
-                { formula: `=ROUND(G${r}*(I${r}+J${r})/M${r},0)` },
-                // ── R: Prorated Medical ────────────────────────────────────
-                { formula: `=ROUND(H${r}*(I${r}+J${r})/M${r},0)` },
-                // ── S: GROSS (direct from full gross, avoids rounding drift) ─
-                { formula: `=ROUND(C${r}*(I${r}+J${r})/M${r},0)` },
-                // ── T: E.P.F = 12% of prorated Basic ──────────────────────
-                { formula: `=ROUND(N${r}*0.12,0)` },
-                // ── U: E.S.I = 0.75% of GROSS (only if P.M ≤ ₹21,000) ────
-                { formula: `=IF(C${r}<=21000,ROUND(S${r}*0.0075,0),0)` },
-                // ── V: P.T = ₹200 / ₹150 / ₹0 based on full gross ─────────
-                { formula: `=IF(C${r}>=20000,200,IF(C${r}>=15000,150,0))` },
-                // ── W: ADV. (Advance) — editable, default 0 ───────────────
-                0,
-                // ── X: Total Deductions ────────────────────────────────────
-                { formula: `=T${r}+U${r}+V${r}+W${r}` },
-                // ── Y: NET PAY ─────────────────────────────────────────────
-                { formula: `=S${r}-X${r}` },
-                // ── Z: SIGN (blank for physical signature) ─────────────────
-                ''
-            ]);
-
-            // Alternate row background for readability
-            const rowBg = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
-
-            dataRow.eachCell({ includeEmpty:true }, (cell, ci) => {
-                const isFixed    = ci >= 3  && ci <= 8;
-                const isAtt      = ci >= 9  && ci <= 13;
-                const isProrated = ci >= 14 && ci <= 19;
-                const isDeduct   = ci >= 20 && ci <= 24;
-                const isNet      = ci === 25;
-
-                let bgArgb = rowBg;
-                if (isFixed)    bgArgb = idx % 2 === 0 ? 'FFf0f9ff' : 'FFe0f2fe';
-                if (isAtt)      bgArgb = idx % 2 === 0 ? 'FFf0fdf4' : 'FFdcfce7';
-                if (isProrated) bgArgb = idx % 2 === 0 ? 'FFf0f9ff' : 'FFe0f2fe';
-                if (isDeduct)   bgArgb = idx % 2 === 0 ? 'FFfff1f2' : 'FFffe4e6';
-                if (isNet)      bgArgb = idx % 2 === 0 ? 'FFf0fdf4' : 'FFdcfce7';
-
-                cell.style = {
-                    fill:      { type:'pattern', pattern:'solid', fgColor:{ argb: bgArgb } },
-                    alignment: { horizontal: ci <= 2 ? 'left' : 'center', vertical:'middle' },
-                    border,
-                    font:      { size:10 }
-                };
-
-                // Bold and green for NET PAY
-                if (isNet) cell.font = { bold:true, size:10, color:{ argb:'FF065F46' } };
-                // Italic for formula columns (N–X) to indicate they are editable formulas
-                if (ci >= 14 && ci <= 25 && ci !== 25) cell.font = { size:10, italic:true };
-                // NET stays bold
-                if (isNet) cell.font = { bold:true, size:10, color:{ argb:'FF065F46' }, italic:false };
-
-                // Number format for currency columns (C onwards, except I-M attendance counts)
-                if (ci >= 3 && ci !== 26) {
-                    if (ci < 9 || ci > 13) {
-                        cell.numFmt = '₹#,##0';
-                    }
-                }
-            });
-
-            dataRow.height = 18;
-        });
-
-        // ── Totals row ────────────────────────────────────────────────────────
-        if (res.rows.length > 0) {
-            const firstDataRow = DATA_START_ROW;
-            const lastDataRow  = DATA_START_ROW + res.rows.length - 1;
-
-            const totalRow = sheet.addRow([
-                '', 'TOTAL',
-                { formula: `=SUM(C${firstDataRow}:C${lastDataRow})` },  // C
-                { formula: `=SUM(D${firstDataRow}:D${lastDataRow})` },  // D
-                { formula: `=SUM(E${firstDataRow}:E${lastDataRow})` },  // E
-                { formula: `=SUM(F${firstDataRow}:F${lastDataRow})` },  // F
-                { formula: `=SUM(G${firstDataRow}:G${lastDataRow})` },  // G
-                { formula: `=SUM(H${firstDataRow}:H${lastDataRow})` },  // H
-                { formula: `=SUM(I${firstDataRow}:I${lastDataRow})` },  // I P/Days
-                '',   // J Ph/Days — total not meaningful
-                { formula: `=SUM(K${firstDataRow}:K${lastDataRow})` },  // K Leaves
-                { formula: `=SUM(L${firstDataRow}:L${lastDataRow})` },  // L Absent
-                '',   // M TotalDays — not summed
-                { formula: `=SUM(N${firstDataRow}:N${lastDataRow})` },  // N
-                { formula: `=SUM(O${firstDataRow}:O${lastDataRow})` },  // O
-                { formula: `=SUM(P${firstDataRow}:P${lastDataRow})` },  // P
-                { formula: `=SUM(Q${firstDataRow}:Q${lastDataRow})` },  // Q
-                { formula: `=SUM(R${firstDataRow}:R${lastDataRow})` },  // R
-                { formula: `=SUM(S${firstDataRow}:S${lastDataRow})` },  // S GROSS
-                { formula: `=SUM(T${firstDataRow}:T${lastDataRow})` },  // T EPF
-                { formula: `=SUM(U${firstDataRow}:U${lastDataRow})` },  // U ESI
-                { formula: `=SUM(V${firstDataRow}:V${lastDataRow})` },  // V PT
-                { formula: `=SUM(W${firstDataRow}:W${lastDataRow})` },  // W ADV
-                { formula: `=SUM(X${firstDataRow}:X${lastDataRow})` },  // X T.DED
-                { formula: `=SUM(Y${firstDataRow}:Y${lastDataRow})` },  // Y NET
-                ''    // Z SIGN
-            ]);
-            totalRow.height = 22;
-            totalRow.eachCell({ includeEmpty:true }, (cell, ci) => {
-                cell.style = {
-                    font:      { bold:true, size:10, color:{ argb:'FFFFFFFF' } },
-                    fill:      { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0F172A' } },
-                    alignment: { horizontal: ci <= 2 ? 'left' : 'center', vertical:'middle' },
-                    border,
-                    numFmt:    (ci >= 3 && (ci < 9 || ci > 13) && ci !== 26) ? '₹#,##0' : 'General'
-                };
-            });
+        if (salarySelectedIds.size === 0) {
+            showToast('No employees selected. Please select at least one.', 'warn'); return;
         }
 
-        // ── Column widths ─────────────────────────────────────────────────────
-        sheet.getColumn('A').width = 8;
-        sheet.getColumn('B').width = 28;
-        ['C','D','E','F','G','H'].forEach(c => { sheet.getColumn(c).width = 10; });
-        ['I','J','K','L','M'].forEach(c => { sheet.getColumn(c).width = 8; });
-        ['N','O','P','Q','R','S'].forEach(c => { sheet.getColumn(c).width = 10; });
-        ['T','U','V'].forEach(c => { sheet.getColumn(c).width = 8; });
-        sheet.getColumn('W').width = 8;
-        sheet.getColumn('X').width = 9;
-        sheet.getColumn('Y').width = 11;
-        sheet.getColumn('Z').width = 14;
-
-        // ── Freeze panes: lock first 3 rows + first 2 columns ─────────────────
-        sheet.views = [{ state:'frozen', xSplit:2, ySplit:3 }];
-
-        // ── Download ──────────────────────────────────────────────────────────
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob   = new Blob([buffer], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const link   = document.createElement('a');
-        link.href = URL.createObjectURL(blob); link.download = fileName;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        showLoader('excel');
+        const res = await callGoogleAPI({ action:'exportSalaryReport', month:m });
         hideLoader();
-        showToast('Salary Report Downloaded ✅');
+        if (res.status === 'error') { showToast(res.message, 'error'); return; }
+
+        // Filter rows by selected employee IDs
+        const filteredRows = (res.rows || []).filter(r => salarySelectedIds.has(r.id.toString()));
+        if (filteredRows.length === 0) { showToast('No data for selected employees.', 'warn'); return; }
+
+        showLoader('excel');
+        try {
+            const [year, monthNum] = m.split('-');
+            const mName      = new Date(year, parseInt(monthNum)-1, 1).toLocaleString('default',{month:'long'});
+            const asOf       = res.cutoffInfo ? ` — As of ${res.cutoffInfo}` : '';
+            const fileName   = `${mName} ${year} - Salary Report${asOf}.xlsx`;
+
+            const wb    = new ExcelJS.Workbook();
+            const sheet = workbook_sheet(wb, 'Salary Report');
+            const bdr   = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+
+            // ── Pre-define column metadata ─────────────────────────────────────
+            const colDefs = [
+                {key:'A',w:8,  label:'EMP\nID',     group:'id'},
+                {key:'B',w:28, label:'NAME',         group:'id'},
+                {key:'C',w:11, label:'P.M\n(Gross)', group:'fixed', isCurr:true},
+                {key:'D',w:10, label:'BASIC',         group:'fixed', isCurr:true},
+                {key:'E',w:10, label:'HRA',            group:'fixed', isCurr:true},
+                {key:'F',w:10, label:'Conv.\nAllow',  group:'fixed', isCurr:true},
+                {key:'G',w:10, label:'Spl\nAllow',    group:'fixed', isCurr:true},
+                {key:'H',w:10, label:'Medical',        group:'fixed', isCurr:true},
+                {key:'I',w:8,  label:'P/Days',         group:'att'},
+                {key:'J',w:8,  label:'Ph/Days',        group:'att'},
+                {key:'K',w:8,  label:'Leaves\nAvld',  group:'att'},
+                {key:'L',w:8,  label:'Absent\nDays',  group:'att'},
+                {key:'M',w:8,  label:'Total\nDays',   group:'att'},
+                {key:'N',w:11, label:'BASIC',          group:'pro',  isCurr:true},
+                {key:'O',w:10, label:'HRA',             group:'pro',  isCurr:true},
+                {key:'P',w:10, label:'Conv.\nAllow',   group:'pro',  isCurr:true},
+                {key:'Q',w:10, label:'Spl\nAllow',     group:'pro',  isCurr:true},
+                {key:'R',w:10, label:'Medical',         group:'pro',  isCurr:true},
+                {key:'S',w:11, label:'GROSS',           group:'pro',  isCurr:true},
+                {key:'T',w:9,  label:'E.P.F',           group:'ded',  isCurr:true},
+                {key:'U',w:9,  label:'E.S.I',           group:'ded',  isCurr:true},
+                {key:'V',w:8,  label:'P.T',             group:'ded',  isCurr:true},
+                {key:'W',w:8,  label:'ADV.',            group:'ded',  isCurr:true},
+                {key:'X',w:10, label:'T.DED.',          group:'ded',  isCurr:true},
+                {key:'Y',w:12, label:'NET',             group:'net',  isCurr:true},
+                {key:'Z',w:14, label:'SIGN',            group:'sign'},
+            ];
+
+            const groupColors = {
+                id:    { bg:'FFe2e8f0', font:'FF1e3a5f' },
+                fixed: { bg:'FFdbeafe', font:'FF1e3a5f' },
+                att:   { bg:'FFdcfce7', font:'FF14532d' },
+                pro:   { bg:'FFe0f2fe', font:'FF0c4a6e' },
+                ded:   { bg:'FFffe4e6', font:'FF7f1d1d' },
+                net:   { bg:'FFbbf7d0', font:'FF065f46' },
+                sign:  { bg:'FFfefce8', font:'FF713f12' },
+            };
+
+            const groupNames = {
+                id:'EMPLOYEE', fixed:'FIXED SALARY STRUCTURE',
+                att:'ATTENDANCE', pro:'PRORATED EARNINGS (FORMULA)',
+                ded:'DEDUCTIONS (FORMULA)', net:'NET PAY', sign:''
+            };
+
+            // Set column widths
+            colDefs.forEach((cd, i) => { sheet.getColumn(i+1).width = cd.w; });
+
+            // ── Row 1: Main title ─────────────────────────────────────────────
+            sheet.addRow([`CAPCO CAPACITOR  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
+            sheet.mergeCells(1,1,1,26);
+            Object.assign(sheet.getRow(1).getCell(1), {
+                style:{ font:{bold:true,size:12,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr }
+            });
+            sheet.getRow(1).height = 26;
+
+            // ── Row 2: Group header ───────────────────────────────────────────
+            sheet.addRow([]);
+            sheet.getRow(2).height = 18;
+            const groups = [
+                {from:1,to:2,grp:'id'},{from:3,to:8,grp:'fixed'},
+                {from:9,to:13,grp:'att'},{from:14,to:19,grp:'pro'},
+                {from:20,to:24,grp:'ded'},{from:25,to:25,grp:'net'},
+                {from:26,to:26,grp:'sign'}
+            ];
+            groups.forEach(g => {
+                if (g.from < g.to) sheet.mergeCells(2,g.from,2,g.to);
+                const gc = groupColors[g.grp];
+                const cell = sheet.getRow(2).getCell(g.from);
+                cell.value = groupNames[g.grp];
+                cell.style = { font:{bold:true,size:9,color:{argb:gc.font}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:gc.bg}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr };
+            });
+
+            // ── Row 3: Column sub-headers ─────────────────────────────────────
+            sheet.addRow(colDefs.map(c => c.label));
+            sheet.getRow(3).height = 34;
+            colDefs.forEach((cd, i) => {
+                const gc   = groupColors[cd.group];
+                const cell = sheet.getRow(3).getCell(i+1);
+                cell.style = { font:{bold:true,size:9,color:{argb:gc.font}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:gc.bg}}, alignment:{horizontal:'center',vertical:'middle',wrapText:true}, border:bdr };
+            });
+
+            // ── Data rows ─────────────────────────────────────────────────────
+            const DATA_START = 4;
+            filteredRows.forEach((emp, idx) => {
+                const r   = DATA_START + idx;
+                const row = sheet.addRow([
+                    emp.id, emp.name,
+                    emp.gross, emp.basic, emp.hra, emp.conv, emp.spl, emp.med,
+                    emp.pDays, emp.phDays, emp.leavesAvailed, emp.absentDays, emp.totalDays,
+                    null,null,null,null,null,null, // N-S formula cols
+                    null,null,null,0,null,null,''  // T-Z
+                ]);
+                row.height = 18;
+
+                // Set formulas individually (faster than passing in addRow array)
+                const fset = (col, f) => { row.getCell(col).value = { formula: f }; };
+                fset('N', `=ROUND(D${r}*(I${r}+J${r})/M${r},0)`);
+                fset('O', `=ROUND(E${r}*(I${r}+J${r})/M${r},0)`);
+                fset('P', `=ROUND(F${r}*(I${r}+J${r})/M${r},0)`);
+                fset('Q', `=ROUND(G${r}*(I${r}+J${r})/M${r},0)`);
+                fset('R', `=ROUND(H${r}*(I${r}+J${r})/M${r},0)`);
+                fset('S', `=ROUND(C${r}*(I${r}+J${r})/M${r},0)`);
+                fset('T', `=ROUND(N${r}*0.12,0)`);
+                fset('U', `=IF(C${r}<=21000,ROUND(S${r}*0.0075,0),0)`);
+                fset('V', `=IF(C${r}>=20000,200,IF(C${r}>=15000,150,0))`);
+                fset('X', `=T${r}+U${r}+V${r}+W${r}`);
+                fset('Y', `=S${r}-X${r}`);
+
+                // Apply row styling (ONE loop, no eachCell)
+                const rowBg = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
+                colDefs.forEach((cd, ci) => {
+                    const cell = row.getCell(ci+1);
+                    const gc   = groupColors[cd.group];
+                    // Alternate shading — lighter version of group color for odd rows
+                    const bg   = idx % 2 === 0 ? gc.bg : rowBg;
+                    cell.style = {
+                        fill:      { type:'pattern', pattern:'solid', fgColor:{argb:bg} },
+                        alignment: { horizontal: ci < 2 ? 'left' : 'center', vertical:'middle' },
+                        border:    bdr,
+                        font:      { size:9, bold: cd.group === 'net', color:{ argb: cd.group === 'net' ? 'FF065F46' : 'FF1e293b' } },
+                        numFmt:    cd.isCurr ? '"₹"#,##0' : 'General'
+                    };
+                });
+            });
+
+            // ── Totals row ────────────────────────────────────────────────────
+            const last = DATA_START + filteredRows.length - 1;
+            const sumCols = ['C','D','E','F','G','H','I','K','L','N','O','P','Q','R','S','T','U','V','W','X','Y'];
+            const totalVals = new Array(26).fill('');
+            totalVals[0] = ''; totalVals[1] = 'TOTAL';
+            const totalRow = sheet.addRow(totalVals);
+            totalRow.height = 20;
+            sumCols.forEach(col => {
+                const ci = col.charCodeAt(0) - 65 + 1;
+                totalRow.getCell(col).value = { formula: `=SUM(${col}${DATA_START}:${col}${last})` };
+                const cd = colDefs[ci-1];
+                totalRow.getCell(col).style = {
+                    font:{ bold:true, size:10, color:{argb:'FFFFFFFF'} },
+                    fill:{ type:'pattern', pattern:'solid', fgColor:{argb:'FF0F172A'} },
+                    alignment:{horizontal:'center',vertical:'middle'},
+                    border: bdr,
+                    numFmt: cd && cd.isCurr ? '"₹"#,##0' : 'General'
+                };
+            });
+            // Style non-sum total cells
+            [1,2,10,11,13,14,26].forEach(ci => {
+                totalRow.getCell(ci).style = { font:{bold:true,size:10,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr };
+            });
+            totalRow.getCell(2).value = 'TOTAL';
+
+            // ── Freeze panes ─────────────────────────────────────────────────
+            sheet.views = [{ state:'frozen', xSplit:2, ySplit:3 }];
+
+            // ── Download ──────────────────────────────────────────────────────
+            const buf  = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+            const a    = document.createElement('a');
+            a.href     = URL.createObjectURL(blob); a.download = fileName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            showToast(`✅ Salary report downloaded for ${filteredRows.length} employee(s)`);
+        } catch(err) {
+            console.error('Salary report build error:', err);
+            showToast('Excel build failed: ' + err.message, 'error');
+        } finally { hideLoader(); }
     }
+
+    // Helper: create a workbook and worksheet in one call
+    function workbook_sheet(wb, name) { return wb.addWorksheet(name); }
     let isLightMode = false;
     function toggleTheme() {
         isLightMode = !isLightMode;
