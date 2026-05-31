@@ -1388,10 +1388,10 @@
         if (isAdminHR) {
             ['snav-dashboard','snav-reports','snav-admin'].forEach(id => {
                 const el = document.getElementById(id);
-                if (el) el.style.display = '';
+                if (el) el.style.display = 'flex';   // must be 'flex' — sidebar-item is flex
             });
             const sec = document.getElementById('snav-admin-section');
-            if (sec) sec.style.display = '';
+            if (sec) sec.style.display = 'block';
         }
 
         // Mobile nav visibility
@@ -1399,8 +1399,8 @@
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
         });
-        if (isEmployee)  { const el = document.getElementById('mnav-payslip');   if(el) el.style.display = ''; }
-        if (isAdminHR)   { ['mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; }); }
+        if (isEmployee)  { const el = document.getElementById('mnav-payslip');   if(el) el.style.display = 'flex'; }
+        if (isAdminHR)   { ['mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='flex'; }); }
 
         // Bell (Admin & HR only)
         ['bell-btn-desktop','bell-btn-mobile'].forEach(id => {
