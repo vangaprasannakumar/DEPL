@@ -2423,7 +2423,11 @@
         const sandwichRow  = (data.sandwichDays > 0)
             ? `<div class="emp-dash-row" style="color:var(--danger);"><span>Sandwich Deductions:</span><span style="color:var(--danger);font-weight:600;">- ${data.sandwichDays} day${data.sandwichDays>1?'s':''}</span></div>`
             : '';
-        const attendPct    = data.monthDays > 0 ? Math.round((data.present / data.monthDays) * 100) : 0;
+        // FIX: Attendance % must use WORKING days (monthDays - ph) as denominator.
+        // Old: present / monthDays = 22/28 = 79% ← WRONG (includes PH+Sundays in denominator)
+        // New: present / workingDays = 22/22 = 100% ← CORRECT
+        const workingDays  = Math.max(1, data.monthDays - data.ph);
+        const attendPct    = Math.round((data.present / workingDays) * 100);
 
         // ── In-app payslip view ──
         resDiv.innerHTML = `
