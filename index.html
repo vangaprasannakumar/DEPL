@@ -2279,62 +2279,149 @@
         } else { showToast(res.message, 'error'); }
     }
 
-    // ── SALARY REPORT EMPLOYEE FILTER ─────────────────────────────────────────
-    // FIX: Removed the guard `chipsEl.children.length === employeeList.length`
-    // which prevented salarySelectedIds from being re-initialized on revisit,
-    // leaving the Set empty and causing "No data for selected employees."
-    // Now: HTML chips built once (via salaryFilterBuilt flag), but salarySelectedIds
-    // is ALWAYS re-initialized so it always reflects all employees as selected.
+    // ── SALARY REPORT EXCEL-STYLE EMPLOYEE FILTER ────────────────────────────
     let salarySelectedIds = new Set();
     let salaryFilterBuilt = false;
+    let salaryDropdownOpen = false;
 
+    // Build the dropdown item list from employeeList.
+    // Called from navTo('reports') and after fetchAllData so the list is fresh.
     function buildSalaryEmployeeFilter() {
         if (!employeeList || employeeList.length === 0) return;
-        const chipsEl = document.getElementById('salary-emp-chips');
-        if (!chipsEl) return;
+        const sfList = document.getElementById('sf-list');
+        if (!sfList) return;
 
-        // Build chips HTML only once — avoid costly DOM rebuild on every nav
+        // Build items HTML once; always reinitialize the selected Set
         if (!salaryFilterBuilt) {
-            chipsEl.innerHTML = employeeList.map(emp => `
-                <label class="emp-filter-chip selected" id="chip-${emp.id}"
-                       onclick="toggleSalaryChip('${emp.id}', this)">
-                    ${emp.id} — ${safeStr(emp.name)}
-                </label>
+            sfList.innerHTML = employeeList.map(emp => `
+                <div class="sf-item" id="sf-item-${emp.id}" data-name="${safeStr(emp.name).toLowerCase()}" data-id="${emp.id}">
+                    <input type="checkbox" id="sf-chk-${emp.id}" checked
+                           onchange="toggleSalaryItem('${emp.id}', this)">
+                    <span class="sf-item-id">${emp.id}</span>
+                    <span class="sf-item-name">${safeStr(emp.name)}</span>
+                </div>
             `).join('');
             salaryFilterBuilt = true;
         }
 
-        // ALWAYS reinitialize the Set so all employees are selected by default
-        // This was the bug: if user navigated away and back, salarySelectedIds
-        // remained empty because the HTML guard prevented re-initialization.
+        // Always reinitialize Set to all-selected (was the original bug)
         salarySelectedIds = new Set(employeeList.map(e => e.id.toString()));
 
-        // Re-apply selected CSS to all chips (in case user deselected some before)
+        // Sync checkbox states to match the Set
         employeeList.forEach(emp => {
-            const chip = document.getElementById('chip-' + emp.id);
-            if (chip) chip.classList.add('selected');
+            const chk = document.getElementById('sf-chk-' + emp.id);
+            if (chk) chk.checked = true;
         });
+
+        updateSalaryCountBadge();
+        updateMasterCheckbox();
     }
 
-    function toggleSalaryChip(id, el) {
-        const sid = id.toString();
-        if (salarySelectedIds.has(sid)) {
-            salarySelectedIds.delete(sid);
-            el.classList.remove('selected');
-        } else {
-            salarySelectedIds.add(sid);
-            el.classList.add('selected');
+    // Open / close the dropdown panel
+    function toggleSalaryDropdown() {
+        const panel   = document.getElementById('salary-filter-panel');
+        const trigger = document.getElementById('salary-filter-trigger');
+        if (!panel) return;
+        salaryDropdownOpen = !salaryDropdownOpen;
+        panel.classList.toggle('open', salaryDropdownOpen);
+        trigger.classList.toggle('open', salaryDropdownOpen);
+
+        if (salaryDropdownOpen) {
+            // Clear search when opening
+            const si = document.getElementById('sf-search-input');
+            if (si) { si.value = ''; filterSalarySearch(''); si.focus(); }
+            // Close when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', closeSalaryDropdownOutside, { once: true });
+            }, 50);
         }
     }
 
-    function salaryFilterAll(select) {
-        if (!employeeList) return;
-        employeeList.forEach(emp => {
-            const chip = document.getElementById('chip-' + emp.id);
-            if (!chip) return;
-            if (select) { salarySelectedIds.add(emp.id.toString());    chip.classList.add('selected'); }
-            else        { salarySelectedIds.delete(emp.id.toString()); chip.classList.remove('selected'); }
+    function closeSalaryDropdownOutside(e) {
+        const wrap = document.getElementById('salary-filter-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            salaryDropdownOpen = false;
+            const panel   = document.getElementById('salary-filter-panel');
+            const trigger = document.getElementById('salary-filter-trigger');
+            if (panel)   panel.classList.remove('open');
+            if (trigger) trigger.classList.remove('open');
+        } else if (wrap && wrap.contains(e.target)) {
+            // Still inside — re-attach the listener
+            setTimeout(() => {
+                document.addEventListener('click', closeSalaryDropdownOutside, { once: true });
+            }, 50);
+        }
+    }
+
+    // Filter visible items by search query
+    function filterSalarySearch(query) {
+        const q     = query.toLowerCase().trim();
+        const items = document.querySelectorAll('#sf-list .sf-item');
+        let visible = 0;
+        items.forEach(item => {
+            const name = item.dataset.name || '';
+            const id   = (item.dataset.id || '').toLowerCase();
+            const show = !q || name.includes(q) || id.includes(q);
+            item.classList.toggle('hidden', !show);
+            if (show) visible++;
         });
+        const vc = document.getElementById('sf-vis-count');
+        if (vc) vc.textContent = q ? `${visible} match${visible !== 1 ? 'es' : ''}` : '';
+        updateMasterCheckbox();
+    }
+
+    // Toggle individual employee checkbox
+    function toggleSalaryItem(id, chkEl) {
+        const sid = id.toString();
+        if (chkEl.checked) salarySelectedIds.add(sid);
+        else               salarySelectedIds.delete(sid);
+        updateSalaryCountBadge();
+        updateMasterCheckbox();
+    }
+
+    // Select All / Deselect All — only affects currently VISIBLE items
+    function salaryFilterAll(selectState) {
+        const items = document.querySelectorAll('#sf-list .sf-item:not(.hidden)');
+        items.forEach(item => {
+            const sid = item.dataset.id.toString();
+            const chk = document.getElementById('sf-chk-' + sid);
+            if (selectState) { salarySelectedIds.add(sid);    if (chk) chk.checked = true; }
+            else              { salarySelectedIds.delete(sid); if (chk) chk.checked = false; }
+        });
+        // Sync the master checkbox state
+        const mc = document.getElementById('sf-master-chk');
+        if (mc) mc.checked = !!selectState;
+        updateSalaryCountBadge();
+    }
+
+    // Update the trigger button badge: "All Selected" / "X of Y Selected"
+    function updateSalaryCountBadge() {
+        const badge   = document.getElementById('sf-count-badge');
+        const total   = employeeList ? employeeList.length : 0;
+        const selected = salarySelectedIds.size;
+        if (!badge) return;
+        if (selected === 0)       badge.textContent = 'None Selected';
+        else if (selected === total) badge.textContent = `All Selected (${total})`;
+        else                      badge.textContent = `${selected} of ${total} Selected`;
+        // Visual cue when not all are selected
+        badge.style.background = selected === 0
+            ? 'rgba(239,68,68,0.15)'
+            : selected < total
+                ? 'rgba(245,158,11,0.15)'
+                : 'rgba(59,130,246,0.15)';
+        badge.style.color = selected === 0 ? 'var(--danger)' : selected < total ? 'var(--warning)' : 'var(--accent)';
+    }
+
+    // Keep master checkbox tri-state in sync with visible items
+    function updateMasterCheckbox() {
+        const mc      = document.getElementById('sf-master-chk');
+        if (!mc) return;
+        const visible = [...document.querySelectorAll('#sf-list .sf-item:not(.hidden)')];
+        if (visible.length === 0) { mc.checked = false; mc.indeterminate = false; return; }
+        const allChk  = visible.every(i => salarySelectedIds.has(i.dataset.id.toString()));
+        const noneChk = visible.every(i => !salarySelectedIds.has(i.dataset.id.toString()));
+        mc.indeterminate = !allChk && !noneChk;
+        mc.checked       = allChk;
     }
 
     function populateEmpdashDropdown() {
@@ -2625,21 +2712,25 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         renderPayslipToDiv(data, 'mypayslip-results');
     }
 
+    // FIX PRINT: currentPayslipHTML is a complete <!DOCTYPE html> document.
+    // Injecting it into a <div> via innerHTML causes the browser to strip all
+    // <html>/<head>/<body> tags including the inline <style> block → blank page.
+    // Fix: open a new window and write the full document directly into it.
     function downloadPayslip() {
-        if (!currentPayslipHTML) return;
+        if (!currentPayslipHTML) { showToast('Generate a payslip first.', 'warn'); return; }
         showToast('Opening Print Dialog...');
-        document.getElementById('print-section').innerHTML = currentPayslipHTML;
-        const originalTitle = document.title;
-        document.title = currentPayslipTitle;
-        // FIX PERF: Use double-rAF to ensure content is fully rendered before print dialog
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    window.print();
-                    document.title = originalTitle;
-                }, 300);
-            });
-        });
+        const pw = window.open('', '_blank');
+        if (!pw) {
+            showToast('Pop-up blocked — please allow pop-ups for this site, then try again.', 'error');
+            return;
+        }
+        pw.document.open();
+        pw.document.write(currentPayslipHTML);
+        pw.document.close();
+        // Auto-trigger print once the new window's content is fully loaded
+        pw.onload = () => { setTimeout(() => pw.print(), 350); };
+        // Fallback for browsers that don't fire onload on document.write
+        setTimeout(() => { try { if (pw && !pw.closed) pw.print(); } catch(e) {} }, 900);
     }
 
     // ── HISTORY ──
