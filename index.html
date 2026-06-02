@@ -203,8 +203,9 @@
         .pending-pill.visible { display:inline-flex; align-items:center; gap:3px; }
 
         /* FIX FONT: Buttons do not inherit font-family from body in all browsers.
-           This forces Outfit across all button, input, and select elements. */
-        button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: 'Outfit', sans-serif; }
+           !important is required to override the browser user-agent stylesheet
+           which resets font via the font shorthand on <button> elements. */
+        button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: 'Outfit', sans-serif !important; }
 
         /* ── BELL NOTIFICATION ── */
         .bell-btn { position:relative; background:none; border:1px solid rgba(128,128,128,0.2); border-radius:12px; width:38px; height:38px; display:none; justify-content:center; align-items:center; cursor:pointer; transition:all 0.2s; color:var(--text-muted); flex-shrink:0; padding:0; }
@@ -226,11 +227,39 @@
         .bell-req-resolve:hover { background:rgba(16,185,129,0.25); }
         .bell-empty { padding:28px 20px; text-align:center; color:var(--text-muted); font-size:14px; }
 
-        /* ── REPORTS SUB-TABS ── */
-        #reports-emp-filter { background:rgba(128,128,128,0.04); border:1px solid rgba(128,128,128,0.1); border-radius:14px; padding:16px; margin-top:12px; }
-        .emp-filter-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:100px; border:1px solid rgba(128,128,128,0.2); background:rgba(128,128,128,0.06); font-size:12px; font-weight:500; cursor:pointer; transition:all 0.18s; margin:4px 3px; color:var(--text-muted); user-select:none; }
-        .emp-filter-chip.selected { background:rgba(59,130,246,0.14); border-color:var(--accent); color:var(--accent); }
-        .emp-filter-chip input[type=checkbox] { display:none; }
+        /* ── EXCEL-STYLE SALARY EMPLOYEE FILTER DROPDOWN ── */
+        .salary-filter-wrap      { position:relative; margin-top:14px; }
+        .salary-filter-trigger   { width:100%; display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; cursor:pointer; font-family:'Outfit',sans-serif !important; font-size:14px; color:var(--text-main); transition:all 0.2s; }
+        .salary-filter-trigger:hover { border-color:var(--accent); }
+        .salary-filter-trigger.open  { border-color:var(--accent); border-radius:12px 12px 0 0; }
+        .salary-filter-trigger .sf-label { display:flex; align-items:center; gap:8px; }
+        .salary-filter-trigger .sf-arrow { font-size:10px; color:var(--text-muted); transition:transform 0.2s; }
+        .salary-filter-trigger.open .sf-arrow { transform:rotate(180deg); }
+        .sf-count-badge { font-size:11px; padding:2px 8px; border-radius:100px; background:rgba(59,130,246,0.15); color:var(--accent); font-weight:600; }
+        /* Panel */
+        .salary-filter-panel { display:none; position:absolute; top:100%; left:0; right:0; background:var(--surface); border:1px solid var(--accent); border-top:none; border-radius:0 0 14px 14px; z-index:800; box-shadow:0 12px 40px rgba(0,0,0,0.5); }
+        .salary-filter-panel.open { display:block; }
+        /* Search row */
+        .sf-search-row { padding:10px 12px; border-bottom:1px solid rgba(128,128,128,0.12); display:flex; gap:8px; align-items:center; }
+        .sf-search-input { flex:1; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-main); font-size:13px; font-family:'Outfit',sans-serif !important; outline:none; }
+        .sf-search-input::placeholder { color:var(--text-muted); }
+        .sf-search-input:focus { border-color:var(--accent); }
+        /* Master row */
+        .sf-master-row { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid rgba(128,128,128,0.12); background:rgba(128,128,128,0.04); }
+        .sf-master-chk { display:flex; align-items:center; gap:7px; cursor:pointer; font-size:13px; font-weight:600; color:var(--text-main); user-select:none; }
+        .sf-master-chk input[type=checkbox] { width:15px; height:15px; accent-color:var(--accent); cursor:pointer; }
+        .sf-vis-count { font-size:11px; color:var(--text-muted); }
+        /* Scrollable items list */
+        .sf-list { max-height:240px; overflow-y:auto; padding:4px 0; scrollbar-width:thin; }
+        .sf-list::-webkit-scrollbar { width:5px; }
+        .sf-list::-webkit-scrollbar-thumb { background:rgba(128,128,128,0.25); border-radius:3px; }
+        /* Each item */
+        .sf-item { display:flex; align-items:center; gap:10px; padding:8px 14px; cursor:pointer; transition:background 0.15s; font-size:13px; color:var(--text-main); }
+        .sf-item:hover { background:rgba(59,130,246,0.08); }
+        .sf-item.hidden { display:none; }
+        .sf-item input[type=checkbox] { width:14px; height:14px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+        .sf-item-id   { font-size:11px; color:var(--text-muted); min-width:22px; }
+        .sf-item-name { flex:1; }
 
         /* ── ENROLLMENT REMINDER ── */
         .enroll-reminder {
@@ -688,17 +717,37 @@
                     📋 <strong style="color:var(--text-main);">Columns:</strong> Emp ID · Name · Gross · Basic · HRA · Conv · Spl · Medical · P/Days · Ph/Days · Leaves · Absent · Total Days → Prorated BASIC · HRA · Conv · Spl · Medical · GROSS · EPF · ESI · PT · ADV · T.DED · NET · SIGN
                 </div>
 
-                <!-- Employee filter -->
-                <div id="reports-emp-filter">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-                        <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;">Employee Filter</span>
-                        <div style="display:flex;gap:7px;">
-                            <button style="font-size:11px;padding:4px 12px;border-radius:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:var(--accent);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;" onclick="salaryFilterAll(true)">Select All</button>
-                            <button style="font-size:11px;padding:4px 12px;border-radius:8px;background:rgba(128,128,128,0.08);border:1px solid rgba(128,128,128,0.2);color:var(--text-muted);cursor:pointer;font-family:'Outfit',sans-serif;font-weight:600;" onclick="salaryFilterAll(false)">Deselect All</button>
+                <!-- Excel-style Employee Filter Dropdown -->
+                <div class="salary-filter-wrap" id="salary-filter-wrap">
+                    <button class="salary-filter-trigger" id="salary-filter-trigger"
+                            onclick="toggleSalaryDropdown()" type="button">
+                        <span class="sf-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                            Employee Filter
+                            <span class="sf-count-badge" id="sf-count-badge">All Selected</span>
+                        </span>
+                        <span class="sf-arrow">▼</span>
+                    </button>
+
+                    <div class="salary-filter-panel" id="salary-filter-panel">
+                        <!-- Search -->
+                        <div class="sf-search-row">
+                            <input class="sf-search-input" id="sf-search-input"
+                                   type="text" placeholder="🔍  Search employee name or ID..."
+                                   oninput="filterSalarySearch(this.value)">
                         </div>
+                        <!-- Master select row -->
+                        <div class="sf-master-row">
+                            <label class="sf-master-chk">
+                                <input type="checkbox" id="sf-master-chk" checked
+                                       onchange="salaryFilterAll(this.checked)">
+                                Select All
+                            </label>
+                            <span class="sf-vis-count" id="sf-vis-count"></span>
+                        </div>
+                        <!-- Employee list -->
+                        <div class="sf-list" id="sf-list"></div>
                     </div>
-                    <div id="salary-emp-chips" style="display:flex;flex-wrap:wrap;gap:0;"></div>
-                    <p style="font-size:11.5px;color:var(--text-muted);margin:8px 0 0;">Default: all selected. Tap to toggle individual employees.</p>
                 </div>
 
                 <label for="report-salary-month" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:14px;display:block;">Select Month</label>
@@ -1953,10 +2002,18 @@
     document.getElementById('empl-dropdown-list').addEventListener('click',          e => { const i=e.target.closest('.dropdown-item'); if(i) chooseEntry(i.dataset.id,i.dataset.text); });
     document.getElementById('hist-empl-dropdown-list').addEventListener('click',     e => { const i=e.target.closest('.dropdown-item'); if(i) chooseHist(i.dataset.id,i.dataset.text); });
     document.addEventListener('click', e => {
+        // Leave employee dropdown
         const ll = document.getElementById('leave-empl-dropdown-list');
-        if (ll) { const i=e.target.closest('#leave-empl-dropdown-list .dropdown-item'); if(i) chooseLeave(i.dataset.id,i.dataset.text); }
+        if (ll) {
+            const i = e.target.closest('#leave-empl-dropdown-list .dropdown-item');
+            if (i && i.dataset.id) chooseLeave(i.dataset.id, i.dataset.text);
+        }
+        // Employee Reports (empdash) dropdown — data-id and data-text added by populateEmpdashDropdown
         const ld = document.getElementById('empdash-dropdown-list');
-        if (ld) { const i=e.target.closest('#empdash-dropdown-list .dropdown-item');   if(i) chooseEmpDash(i.dataset.id,i.dataset.text); }
+        if (ld) {
+            const i = e.target.closest('#empdash-dropdown-list .dropdown-item');
+            if (i && i.dataset.id) chooseEmpDash(i.dataset.id, i.dataset.text);
+        }
     });
 
     function chooseEntry(id, text) {
@@ -2136,7 +2193,10 @@
         document.getElementById('rep-emp-section').style.display  = subTabName === 'emp'  ? 'block' : 'none';
         document.getElementById('rep-btn-dash').classList.toggle('active', subTabName === 'dash');
         document.getElementById('rep-btn-emp').classList.toggle('active',  subTabName === 'emp');
-        if (subTabName === 'emp') populateEmpdashDropdown();
+        if (subTabName === 'emp') {
+            // Always repopulate so new employees appear and data-attrs are correct
+            populateEmpdashDropdown();
+        }
     }
 
     // ── BELL NOTIFICATION ─────────────────────────────────────────────────────
@@ -2220,24 +2280,51 @@
     }
 
     // ── SALARY REPORT EMPLOYEE FILTER ─────────────────────────────────────────
+    // FIX: Removed the guard `chipsEl.children.length === employeeList.length`
+    // which prevented salarySelectedIds from being re-initialized on revisit,
+    // leaving the Set empty and causing "No data for selected employees."
+    // Now: HTML chips built once (via salaryFilterBuilt flag), but salarySelectedIds
+    // is ALWAYS re-initialized so it always reflects all employees as selected.
     let salarySelectedIds = new Set();
+    let salaryFilterBuilt = false;
 
     function buildSalaryEmployeeFilter() {
         if (!employeeList || employeeList.length === 0) return;
         const chipsEl = document.getElementById('salary-emp-chips');
-        if (!chipsEl || chipsEl.children.length === employeeList.length) return;
+        if (!chipsEl) return;
+
+        // Build chips HTML only once — avoid costly DOM rebuild on every nav
+        if (!salaryFilterBuilt) {
+            chipsEl.innerHTML = employeeList.map(emp => `
+                <label class="emp-filter-chip selected" id="chip-${emp.id}"
+                       onclick="toggleSalaryChip('${emp.id}', this)">
+                    ${emp.id} — ${safeStr(emp.name)}
+                </label>
+            `).join('');
+            salaryFilterBuilt = true;
+        }
+
+        // ALWAYS reinitialize the Set so all employees are selected by default
+        // This was the bug: if user navigated away and back, salarySelectedIds
+        // remained empty because the HTML guard prevented re-initialization.
         salarySelectedIds = new Set(employeeList.map(e => e.id.toString()));
-        chipsEl.innerHTML = employeeList.map(emp => `
-            <label class="emp-filter-chip selected" id="chip-${emp.id}" onclick="toggleSalaryChip('${emp.id}', this)">
-                <input type="checkbox" checked>
-                ${emp.id} — ${safeStr(emp.name)}
-            </label>
-        `).join('');
+
+        // Re-apply selected CSS to all chips (in case user deselected some before)
+        employeeList.forEach(emp => {
+            const chip = document.getElementById('chip-' + emp.id);
+            if (chip) chip.classList.add('selected');
+        });
     }
 
     function toggleSalaryChip(id, el) {
-        if (salarySelectedIds.has(id.toString())) { salarySelectedIds.delete(id.toString()); el.classList.remove('selected'); }
-        else { salarySelectedIds.add(id.toString()); el.classList.add('selected'); }
+        const sid = id.toString();
+        if (salarySelectedIds.has(sid)) {
+            salarySelectedIds.delete(sid);
+            el.classList.remove('selected');
+        } else {
+            salarySelectedIds.add(sid);
+            el.classList.add('selected');
+        }
     }
 
     function salaryFilterAll(select) {
@@ -2245,7 +2332,7 @@
         employeeList.forEach(emp => {
             const chip = document.getElementById('chip-' + emp.id);
             if (!chip) return;
-            if (select) { salarySelectedIds.add(emp.id.toString()); chip.classList.add('selected'); }
+            if (select) { salarySelectedIds.add(emp.id.toString());    chip.classList.add('selected'); }
             else        { salarySelectedIds.delete(emp.id.toString()); chip.classList.remove('selected'); }
         });
     }
@@ -2253,17 +2340,20 @@
     function populateEmpdashDropdown() {
         if (!employeeList) return;
         const list  = document.getElementById('empdash-dropdown-list');
-        const input = document.getElementById('empdash-search-input');
-        if (!list || list.children.length > 0) return;
+        if (!list) return;
+        // FIX: Always rebuild and add data-id + data-text so the document-level
+        // click handler receives real values instead of undefined.
+        // Previously items had inline onclick but no data attrs, so event delegation
+        // called chooseEmpDash(undefined, undefined) → "undefined" in the input.
+        list.innerHTML = '';
         employeeList.forEach(emp => {
-            const item = document.createElement('div');
-            item.className = 'dropdown-item';
-            item.innerText = `${emp.name} (ID: ${emp.id})`;
-            item.onclick = () => {
-                document.getElementById('empdash-selected-id').value = emp.id;
-                input.value = `${emp.name} (ID: ${emp.id})`;
-                list.style.display = 'none';
-            };
+            const display = `${emp.id} — ${safeStr(emp.name)}`;
+            const item    = document.createElement('div');
+            item.className       = 'dropdown-item';
+            item.innerText       = display;
+            item.dataset.id      = emp.id.toString();
+            item.dataset.text    = display;
+            item.dataset.action  = 'empdash';
             list.appendChild(item);
         });
     }
@@ -3116,7 +3206,14 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         showLoader('excel');
         const res = await callGoogleAPI({ action:'exportSalaryReport', month:m });
         hideLoader();
-        if (res.status === 'error') { showToast(res.message, 'error'); return; }
+        if (!res || res.status === 'error') {
+            showToast((res && res.message) || 'Failed to fetch salary data from server.', 'error');
+            return;
+        }
+        if (!res.rows || res.rows.length === 0) {
+            showToast('No employee data returned. Check that List_of_Empl sheet has records.', 'warn');
+            return;
+        }
 
         // Filter rows by selected employee IDs
         const filteredRows = (res.rows || []).filter(r => salarySelectedIds.has(r.id.toString()));
