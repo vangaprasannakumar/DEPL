@@ -38,7 +38,7 @@
         @keyframes pulse        { 0%{transform:scale(0.98);opacity:0.85;} 50%{transform:scale(1.02);opacity:1;} 100%{transform:scale(0.98);opacity:0.85;} }
         @keyframes slideUp      { to { opacity:1; transform:translateY(0); } }
         @keyframes navBounce    { 0%,100%{transform:scale(1);} 40%{transform:scale(0.88);} 70%{transform:scale(1.06);} }
-        @keyframes bottomNavIn  { from{opacity:0;transform:translate(-50%,30px);} to{opacity:1;transform:translate(-50%,0);} }
+        @keyframes bottomNavIn  { from{opacity:0;transform:translateY(30px);} to{opacity:1;transform:translateY(0);} }
         @keyframes kiosk-pop    { 0%{opacity:0;transform:scale(0.6);} 70%{transform:scale(1.05);} 100%{opacity:1;transform:scale(1);} }
 
         /* ── LOADER ── */
@@ -101,8 +101,11 @@
         #topbar-network { font-size:12px; font-weight:600; padding:5px 12px; border-radius:20px; }
 
         /* ── MOBILE HEADER ── */
-        #mobile-header-wrapper { display:none; }
+        /* MOBILE HEADER — fixed top, never scrolls away */
+        #mobile-header-wrapper { display:none; position:fixed; top:0; left:0; right:0; z-index:990; background:var(--bg-dark); border-bottom:1px solid var(--border); }
         body.is-logged-in #mobile-header-wrapper { display:block; }
+        #mobile-header-spacer { display:none; height:132px; }
+        body.is-logged-in #mobile-header-spacer { display:block; }
         .header { padding:18px 20px; background:linear-gradient(180deg,rgba(30,41,59,0.5) 0%,rgba(24,24,27,0.1) 100%); border-bottom:1px solid rgba(59,130,246,0.18); }
         .header-top { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:14px; }
         .app-branding { display:flex; align-items:center; gap:10px; }
@@ -116,9 +119,9 @@
         .user-badge    { font-size:12px; font-weight:500; background:rgba(128,128,128,0.1); padding:5px 14px; border-radius:18px; color:var(--text-muted); border:1px solid rgba(128,128,128,0.2); }
         .network-badge { font-size:12px; font-weight:600; padding:5px 14px; border-radius:18px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.1); color:var(--success); }
 
-        /* ── MOBILE BOTTOM NAV ── */
-        #mobile-bottom-nav { display:none; position:fixed; bottom:14px; left:50%; transform:translateX(-50%); background:rgba(14,14,20,0.94); backdrop-filter:blur(24px); border:1px solid rgba(128,128,128,0.2); border-radius:26px; padding:7px 8px; gap:3px; z-index:1000; box-shadow:0 8px 36px rgba(0,0,0,0.5); padding-bottom:calc(7px + env(safe-area-inset-bottom)); }
-        body.is-logged-in #mobile-bottom-nav { display:flex; animation:bottomNavIn 0.5s 0.3s var(--ease) both; }
+        /* MOBILE BOTTOM NAV — full-width fixed strip, never scrolls */
+        #mobile-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; transform:none; background:rgba(14,14,20,0.97); backdrop-filter:blur(24px); border-top:1px solid rgba(128,128,128,0.18); border-radius:0; padding:6px 4px calc(6px + env(safe-area-inset-bottom)); gap:0; z-index:990; box-shadow:0 -4px 24px rgba(0,0,0,0.4); justify-content:space-around; }
+        body.is-logged-in #mobile-bottom-nav { display:flex; animation:bottomNavIn 0.4s var(--ease) both; }
         .mob-nav-item { display:flex; flex-direction:column; align-items:center; padding:8px 15px; border-radius:20px; cursor:pointer; color:var(--text-muted); gap:3px; min-width:54px; transition:all 0.22s var(--ease); -webkit-tap-highlight-color:transparent; }
         .mob-nav-item svg  { width:20px; height:20px; flex-shrink:0; }
         .mob-nav-item span { font-size:10px; font-weight:600; letter-spacing:0.2px; }
@@ -571,7 +574,8 @@
                     <button class="bell-btn" id="bell-btn-mobile" onclick="toggleBellPanel()" title="Correction Requests" style="width:36px;height:36px;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                         <span class="bell-badge" id="bell-badge-mobile"></span>
-                    </button> style="display:none;color:var(--success);border-color:var(--success);" onclick="installPWA()">
+                    </button>
+                    <button class="icon-btn" id="mob-install-btn" style="display:none;color:var(--success);border-color:var(--success);" onclick="installPWA()" title="Install App">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     </button>
                     <button class="icon-btn" onclick="hardRefreshApp(event)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -2514,7 +2518,7 @@
         // Old: present / monthDays = 22/28 = 79% ← WRONG (includes PH+Sundays in denominator)
         // New: present / workingDays = 22/22 = 100% ← CORRECT
         const workingDays  = Math.max(1, data.monthDays - data.ph);
-        const attendPct    = Math.round((data.present / workingDays) * 100);
+        const attendPct    = Math.min(100, Math.round((data.present / workingDays) * 100));
 
         // ── In-app payslip view ──
         resDiv.innerHTML = `
