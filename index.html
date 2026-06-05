@@ -127,6 +127,10 @@
         .mob-nav-item span { font-size:10px; font-weight:600; letter-spacing:0.2px; }
         .mob-nav-item.active   { background:rgba(59,130,246,0.18); color:var(--accent); }
         .mob-nav-item.hidden-mob { display:none; }
+        /* Content bottom padding — clears fixed bottom nav (~70px) */
+        @media(max-width:700px) {
+            .view-section { padding-bottom: 80px !important; }
+        }
 
         /* ── APP CONTAINER ── */
         .app-container { background:rgba(24,24,27,0.7); backdrop-filter:blur(24px); border:1px solid rgba(128,128,128,0.2); width:100%; max-width:500px; border-radius:24px; box-shadow:0 28px 56px -12px rgba(0,0,0,0.7); display:none; animation:slideUpFade 0.5s var(--ease); overflow:hidden; margin-bottom:30px; }
@@ -674,11 +678,35 @@
             </div>
             <p style="font-size:11.5px;color:var(--text-muted);margin-top:8px;margin-bottom:0;">When using date range, Month and Exact Date filters are ignored.</p>
         </div>
-        <div class="dropdown-container" id="hist-empl-search-container">
-            <label for="hist-empl-search-input" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;display:block;">Filter Employee (Optional)</label>
-            <input type="text" id="hist-empl-search-input" class="dropdown-input" placeholder="Search &amp; tap to select..." autocomplete="off" onclick="openDropdown('hist-empl-dropdown-list')" oninput="filterDropdownDebounced('hist-empl-search-input','hist-empl-dropdown-list','hist-empl-selected-id')">
-            <input type="hidden" id="hist-empl-selected-id">
-            <div id="hist-empl-dropdown-list" class="dropdown-list"></div>
+        <!-- Excel-style multi-employee filter for History -->
+        <div id="hist-empl-search-container">
+            <div class="salary-filter-wrap" id="hist-filter-wrap">
+                <button class="salary-filter-trigger" id="hist-filter-trigger"
+                        onclick="toggleHistDropdown()" type="button">
+                    <span class="sf-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                        Employee Filter
+                        <span class="sf-count-badge" id="hist-sf-badge">All Employees</span>
+                    </span>
+                    <span class="sf-arrow">▼</span>
+                </button>
+                <div class="salary-filter-panel" id="hist-filter-panel">
+                    <div class="sf-search-row">
+                        <input class="sf-search-input" id="hist-sf-search"
+                               type="text" placeholder="🔍  Search employee name or ID..."
+                               oninput="filterHistSearch(this.value)">
+                    </div>
+                    <div class="sf-master-row">
+                        <label class="sf-master-chk">
+                            <input type="checkbox" id="hist-sf-master" checked
+                                   onchange="histFilterAll(this.checked)">
+                            Select All
+                        </label>
+                        <span class="sf-vis-count" id="hist-sf-vis-count"></span>
+                    </div>
+                    <div class="sf-list" id="hist-sf-list"></div>
+                </div>
+            </div>
         </div>
         <div style="display:flex;gap:10px;">
             <button class="btn-main" style="margin-top:0;flex:1;" onclick="loadHistory()">Search Records</button>
@@ -2744,21 +2772,25 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     async function loadHistory() {
         const m = document.getElementById('hist-month').value;
         const d = document.getElementById('hist-date').value;
-        // S6: check if date-range mode is active
         const rangeOpen = document.getElementById('hist-range-section').classList.contains('visible');
         const dateFrom  = rangeOpen ? document.getElementById('hist-date-from').value : '';
         const dateTo    = rangeOpen ? document.getElementById('hist-date-to').value   : '';
         if (rangeOpen && (!dateFrom || !dateTo)) {
             showToast('Please select both From and To dates for range search.', 'warn'); return;
         }
-        let q = '';
-        if (currentUser.role === 'Employee') { q = myEmplId; }
-        else { q = document.getElementById('hist-empl-selected-id').value || document.getElementById('hist-empl-search-input').value; }
+        // Employee role: always own ID only
+        // Admin/HR: fetch ALL (query=''), then filter client-side by histFilterIds
+        const q = currentUser.role === 'Employee' ? (myEmplId || '') : '';
         document.getElementById('history-results').innerHTML = '<p style="text-align:center;color:var(--text-muted);">Searching...</p>';
         showLoader('search');
-        const data = await callGoogleAPI({ action: 'searchHistory', month: rangeOpen ? '' : m, date: rangeOpen ? '' : d, dateFrom, dateTo, query: q });
+        const data = await callGoogleAPI({ action:'searchHistory', month: rangeOpen?'':m, date: rangeOpen?'':d, dateFrom, dateTo, query: q });
         hideLoader();
-        renderHistory(data);
+        // Client-side filter by selected employees (Admin/HR multi-select)
+        let filtered = Array.isArray(data) ? data : [];
+        if (currentUser.role !== 'Employee' && histFilterIds.size > 0 && histFilterIds.size < (employeeList||[]).length) {
+            filtered = filtered.filter(r => histFilterIds.has(r.emplId ? r.emplId.toString() : ''));
+        }
+        renderHistory(filtered);
     }
 
     function renderHistory(data) {
