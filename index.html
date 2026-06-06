@@ -1437,6 +1437,7 @@
         }
         if (tabId === 'reports') {
             buildSalaryEmployeeFilter();
+        buildHistFilter();
         }
         // Refresh bell count on every nav
         if (currentUser.role === 'Admin' || currentUser.role === 'HR') fetchBellCount();
@@ -2015,27 +2016,25 @@
         document.getElementById(listId).style.display = 'block';
     }
 
-    // FIX PERF: Build full HTML strings first, then assign once — prevents N×4 reflows
+    // FIX PERF: Build full HTML strings first, then assign once
     function populateDropdowns(data) {
         const le = document.getElementById('empl-dropdown-list');
-        const lh = document.getElementById('hist-empl-dropdown-list');
-        const ll = document.getElementById('leave-empl-dropdown-list');  // updated ID
-        let sLE='', sLH='', sLL='';
+        const ll = document.getElementById('leave-empl-dropdown-list');
+        let sLE='', sLL='';
         data.forEach(e => {
             const display = `${e.id} - ${e.name}`;
             const safeId  = safeStr(String(e.id));
             const safeTxt = safeStr(display);
             const mk = (a) => `<div class="dropdown-item" data-id="${safeId}" data-text="${safeTxt}" data-action="${a}">${safeTxt}</div>`;
-            sLE += mk('entry'); sLH += mk('hist'); sLL += mk('leave');
+            sLE += mk('entry'); sLL += mk('leave');
         });
         if (le) le.innerHTML = sLE;
-        if (lh) lh.innerHTML = sLH;
         if (ll) ll.innerHTML = sLL;
-        // Employee Reports (empdash) dropdown is built lazily via populateEmpdashDropdown()
+        // History uses multi-select (buildHistFilter); empdash uses populateEmpdashDropdown()
     }
 
     document.getElementById('empl-dropdown-list').addEventListener('click',          e => { const i=e.target.closest('.dropdown-item'); if(i) chooseEntry(i.dataset.id,i.dataset.text); });
-    document.getElementById('hist-empl-dropdown-list').addEventListener('click',     e => { const i=e.target.closest('.dropdown-item'); if(i) chooseHist(i.dataset.id,i.dataset.text); });
+    // hist-empl-dropdown replaced by multi-select — no listener needed
     document.addEventListener('click', e => {
         // Leave employee dropdown
         const ll = document.getElementById('leave-empl-dropdown-list');
@@ -2062,7 +2061,7 @@
         } else { document.getElementById('shift-select-container').style.display = 'none'; }
         fetchLiveStatus(id);
     }
-    function chooseHist(id, text)    { document.getElementById('hist-empl-search-input').value=text; document.getElementById('hist-empl-selected-id').value=id; document.getElementById('hist-empl-dropdown-list').style.display='none'; }
+    function chooseHist(id, text) { /* replaced by histFilterIds multi-select */ }
     function chooseLeave(id, text)   { document.getElementById('leave-empl-search-input').value=text; document.getElementById('leave-empl-selected-id').value=id; document.getElementById('leave-empl-dropdown-list').style.display='none'; }
     function chooseEmpDash(id, text) { document.getElementById('empdash-search-input').value=text;   document.getElementById('empdash-selected-id').value=id;    document.getElementById('empdash-dropdown-list').style.display='none'; }
 
@@ -2459,6 +2458,118 @@
         mc.checked       = allChk;
     }
 
+
+    // ── HISTORY MULTI-EMPLOYEE FILTER ────────────────────────────────────────
+    let histFilterIds    = new Set();
+    let histFilterBuilt  = false;
+    let histDropdownOpen = false;
+
+    function buildHistFilter() {
+        if (!employeeList || employeeList.length === 0) return;
+        histFilterIds = new Set(employeeList.map(e => e.id.toString()));
+        const list = document.getElementById('hist-sf-list');
+        if (!list) return;
+        if (!histFilterBuilt) {
+            list.innerHTML = employeeList.map(emp => `
+                <div class="sf-item" id="hf-item-${emp.id}"
+                     data-name="${safeStr(emp.name).toLowerCase()}" data-id="${emp.id}">
+                    <input type="checkbox" id="hf-chk-${emp.id}" checked
+                           onchange="toggleHistItem('${emp.id}',this)">
+                    <span class="sf-item-id">${emp.id}</span>
+                    <span class="sf-item-name">${safeStr(emp.name)}</span>
+                </div>`).join('');
+            histFilterBuilt = true;
+        }
+        employeeList.forEach(emp => {
+            const c = document.getElementById('hf-chk-'+emp.id);
+            if (c) c.checked = true;
+        });
+        updateHistBadge();
+    }
+
+    function toggleHistDropdown() {
+        const panel   = document.getElementById('hist-filter-panel');
+        const trigger = document.getElementById('hist-filter-trigger');
+        if (!panel) return;
+        histDropdownOpen = !histDropdownOpen;
+        panel.classList.toggle('open', histDropdownOpen);
+        trigger.classList.toggle('open', histDropdownOpen);
+        if (histDropdownOpen) {
+            const si = document.getElementById('hist-sf-search');
+            if (si) { si.value = ''; filterHistSearch(''); si.focus(); }
+            setTimeout(() => {
+                document.addEventListener('click', closeHistOutside, { once:true });
+            }, 50);
+        }
+    }
+
+    function closeHistOutside(e) {
+        const wrap = document.getElementById('hist-filter-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+            histDropdownOpen = false;
+            const p = document.getElementById('hist-filter-panel');
+            const t = document.getElementById('hist-filter-trigger');
+            if (p) p.classList.remove('open');
+            if (t) t.classList.remove('open');
+        } else if (wrap && wrap.contains(e.target)) {
+            setTimeout(() => document.addEventListener('click', closeHistOutside, { once:true }), 50);
+        }
+    }
+
+    function filterHistSearch(q) {
+        const query = q.toLowerCase().trim();
+        const items = document.querySelectorAll('#hist-sf-list .sf-item');
+        let vis = 0;
+        items.forEach(item => {
+            const show = !query || (item.dataset.name||'').includes(query) || (item.dataset.id||'').includes(query);
+            item.classList.toggle('hidden', !show);
+            if (show) vis++;
+        });
+        const vc = document.getElementById('hist-sf-vis-count');
+        if (vc) vc.textContent = query ? `${vis} match${vis!==1?'es':''}` : '';
+        updateHistMaster();
+    }
+
+    function toggleHistItem(id, chk) {
+        if (chk.checked) histFilterIds.add(id.toString());
+        else             histFilterIds.delete(id.toString());
+        updateHistBadge(); updateHistMaster();
+    }
+
+    function histFilterAll(sel) {
+        const items = document.querySelectorAll('#hist-sf-list .sf-item:not(.hidden)');
+        items.forEach(item => {
+            const sid = item.dataset.id.toString();
+            const c   = document.getElementById('hf-chk-'+sid);
+            if (sel) { histFilterIds.add(sid);    if(c) c.checked=true; }
+            else     { histFilterIds.delete(sid); if(c) c.checked=false; }
+        });
+        const mc = document.getElementById('hist-sf-master');
+        if (mc) mc.checked = !!sel;
+        updateHistBadge();
+    }
+
+    function updateHistBadge() {
+        const badge = document.getElementById('hist-sf-badge');
+        const total = employeeList ? employeeList.length : 0;
+        const sel   = histFilterIds.size;
+        if (!badge) return;
+        badge.textContent = sel===0 ? 'None' : sel===total ? `All Employees (${total})` : `${sel} of ${total} Selected`;
+        badge.style.background = sel===0?'rgba(239,68,68,0.15)':sel<total?'rgba(245,158,11,0.15)':'rgba(59,130,246,0.15)';
+        badge.style.color = sel===0?'var(--danger)':sel<total?'var(--warning)':'var(--accent)';
+    }
+
+    function updateHistMaster() {
+        const mc  = document.getElementById('hist-sf-master');
+        if (!mc) return;
+        const vis = [...document.querySelectorAll('#hist-sf-list .sf-item:not(.hidden)')];
+        if (!vis.length) { mc.checked=false; mc.indeterminate=false; return; }
+        const allC  = vis.every(i => histFilterIds.has(i.dataset.id.toString()));
+        const noneC = vis.every(i => !histFilterIds.has(i.dataset.id.toString()));
+        mc.indeterminate = !allC && !noneC;
+        mc.checked       = allC;
+    }
+
     function populateEmpdashDropdown() {
         if (!employeeList) return;
         const list  = document.getElementById('empdash-dropdown-list');
@@ -2794,13 +2905,14 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     function renderHistory(data) {
-        historyData = data;
-        const div    = document.getElementById('history-results');
-        const searchQ = (currentUser.role==='Employee') ? myEmplId : (document.getElementById('hist-empl-selected-id').value || document.getElementById('hist-empl-search-input').value);
-        if (!data || data.length === 0) return (div.innerHTML = '<p style="text-align:center;color:var(--text-muted);">No records found.</p>');
+        historyData = Array.isArray(data) ? data : [];
+        const div = document.getElementById('history-results');
+        // Single-employee view when only one employee's records are returned
+        const isSingleEmp = historyData.length > 0 &&
+            historyData.every(d => d.emplId == historyData[0].emplId);
+        if (!historyData || historyData.length === 0) return (div.innerHTML = '<p style="text-align:center;color:var(--text-muted);">No records found.</p>');
 
-        if (searchQ && data.every(d => d.emplId == data[0].emplId)) {
-            let totalOTMins = 0;
+        if (isSingleEmp) {
             // FIX UX: Added Permission column to the single-employee table view
             let tableHTML = `<div class="history-table-container"><div class="history-table-header"><h3 style="margin:0;color:var(--accent);font-size:15px;">${safeStr(String(data[0].emplId))} — ${safeStr(data[0].emplName)}</h3><p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">Records: ${data.length}</p></div><div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>In</th><th>Out</th><th>Perm</th><th>OT</th>${(currentUser.role==='Admin'||currentUser.role==='HR')?'<th>Edit</th>':'<th>Req</th>'}</tr></thead><tbody>`;
             data.forEach((r, idx) => {
@@ -3208,7 +3320,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         const dateTo    = rangeOpen ? document.getElementById('hist-date-to').value   : '';
         let q = '';
         if (currentUser.role === 'Employee') { q = myEmplId; }
-        else { q = document.getElementById('hist-empl-selected-id').value || document.getElementById('hist-empl-search-input').value; }
+        else { q = ''; /* multi-select: filter happens client-side */ }
         showLoader('download');
         const res = await callGoogleAPI({ action:'exportCSV', month: rangeOpen ? '' : m, date: rangeOpen ? '' : d, dateFrom, dateTo, query: q });
         hideLoader();
