@@ -93,7 +93,7 @@
         .sidebar-logout svg { width:18px; height:18px; flex-shrink:0; }
 
         /* ── TOP BAR ── */
-        #desktop-topbar { display:none; height:var(--topbar-h); padding:0 28px; align-items:center; justify-content:space-between; background:rgba(13,13,19,0.9); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:100; flex-shrink:0; }
+        #desktop-topbar { display:none; height:var(--topbar-h); padding:0 28px; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.82); backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.03); position:sticky; top:0; z-index:100; flex-shrink:0; }
         .topbar-left { display:flex; align-items:center; gap:14px; }
         #topbar-page-title { font-size:17px; font-weight:700; color:var(--text-main); }
         .topbar-right { display:flex; align-items:center; gap:10px; }
@@ -102,11 +102,11 @@
 
         /* ── MOBILE HEADER ── */
         /* MOBILE HEADER — fixed top, never scrolls away */
-        #mobile-header-wrapper { display:none; position:fixed; top:0; left:0; right:0; z-index:990; background:var(--bg-dark); border-bottom:1px solid var(--border); }
+        #mobile-header-wrapper { display:none; position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(0,0,0,0.82); backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.03); }
         body.is-logged-in #mobile-header-wrapper { display:block; }
-        #mobile-header-spacer { display:none; height:132px; }
+        #mobile-header-spacer { display:none; height:112px; }
         body.is-logged-in #mobile-header-spacer { display:block; }
-        .header { padding:18px 20px; background:linear-gradient(180deg,rgba(30,41,59,0.5) 0%,rgba(24,24,27,0.1) 100%); border-bottom:1px solid rgba(59,130,246,0.18); }
+        .header { padding:10px 20px; background:transparent; border-bottom:none; }
         .header-top { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:14px; }
         .app-branding { display:flex; align-items:center; gap:10px; }
         .app-branding img { height:30px; width:auto; object-fit:contain; }
@@ -120,16 +120,36 @@
         .network-badge { font-size:12px; font-weight:600; padding:5px 14px; border-radius:18px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.1); color:var(--success); }
 
         /* MOBILE BOTTOM NAV — full-width fixed strip, never scrolls */
-        #mobile-bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; transform:none; background:rgba(14,14,20,0.97); backdrop-filter:blur(24px); border-top:1px solid rgba(128,128,128,0.18); border-radius:0; padding:6px 4px calc(6px + env(safe-area-inset-bottom)); gap:0; z-index:990; box-shadow:0 -4px 24px rgba(0,0,0,0.4); justify-content:space-around; }
+        #mobile-bottom-nav { display:none; position:fixed; bottom:14px; left:50%; transform:translateX(-50%); width:95%; max-width:440px; background:rgba(22,22,28,0.97); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:28px; padding:6px 6px calc(6px + env(safe-area-inset-bottom)); gap:0; z-index:1000; box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 0 0.5px rgba(255,255,255,0.04); justify-content:space-around; overflow:hidden; }
         body.is-logged-in #mobile-bottom-nav { display:flex; animation:bottomNavIn 0.4s var(--ease) both; }
-        .mob-nav-item { display:flex; flex-direction:column; align-items:center; padding:8px 15px; border-radius:20px; cursor:pointer; color:var(--text-muted); gap:3px; min-width:54px; transition:all 0.22s var(--ease); -webkit-tap-highlight-color:transparent; }
+        .mob-nav-item { display:flex; flex-direction:column; align-items:center; padding:8px 8px; border-radius:22px; cursor:pointer; color:var(--text-muted); gap:3px; min-width:54px; min-height:52px; justify-content:center; transition:all 0.22s var(--ease); -webkit-tap-highlight-color:transparent; }
         .mob-nav-item svg  { width:20px; height:20px; flex-shrink:0; }
-        .mob-nav-item span { font-size:10px; font-weight:600; letter-spacing:0.2px; }
-        .mob-nav-item.active   { background:rgba(59,130,246,0.18); color:var(--accent); }
+        .mob-nav-item span { font-size:10px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; }
+        .mob-nav-item.active   { background:rgba(59,130,246,0.15); color:var(--accent); }
         .mob-nav-item.hidden-mob { display:none; }
         /* Content bottom padding — clears fixed bottom nav (~70px) */
         @media(max-width:700px) {
-            .view-section { padding-bottom: 80px !important; }
+            .view-section { padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+
+            /* ── FULL-SCREEN MOBILE SHELL (Fuel Tracker pattern) ── */
+            body.is-logged-in { padding:0; }
+            body.is-logged-in .app-container {
+                max-width:100%; width:100vw; border-radius:0; margin:0;
+                box-shadow:none; border:none; background:var(--bg-dark); backdrop-filter:none;
+            }
+
+            /* ── COMPACT HEADER: collapse two stacked rows into one ── */
+            .header { padding:8px 14px; }
+            .header-top { margin-bottom:6px; }
+            .header-bottom { flex-direction:row; gap:8px; justify-content:space-between; align-items:center; margin-top:0; }
+            .live-clock-container { padding:4px 12px; border-radius:20px; }
+            .live-clock { font-size:11px; letter-spacing:0.2px; }
+            .badge-row { width:auto; gap:6px; flex-wrap:nowrap; justify-content:flex-end; }
+            .user-badge, .network-badge { font-size:11px; padding:4px 10px; }
+            .pending-pill { font-size:11px; padding:4px 10px; }
+
+            /* ── SPACER: match slimmer header height ── */
+            #mobile-header-spacer { height:88px; }
         }
 
         /* ── APP CONTAINER ── */
@@ -337,7 +357,7 @@
         /* ── LIGHT MODE ── */
         body.light-mode { --bg-dark:#f1f5f9; --surface:#ffffff; --surface-hover:#f8fafc; --border:#e2e8f0; --text-main:#0f172a; --text-muted:#64748b; --sidebar-bg:#ffffff; }
         body.light-mode .app-container { background:var(--surface); border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.05); }
-        body.light-mode #desktop-topbar { background:rgba(255,255,255,0.95); border-bottom:1px solid var(--border); }
+        body.light-mode #desktop-topbar { background:rgba(255,255,255,0.92); border-bottom:1px solid var(--border); backdrop-filter:blur(20px); }
         body.light-mode .card, body.light-mode .stat-box, body.light-mode .emp-dash-box { background:rgba(0,0,0,0.02); border-color:rgba(0,0,0,0.06); }
         body.light-mode .card:hover, body.light-mode .stat-box:hover { background:rgba(0,0,0,0.05); }
         body.light-mode .dropdown-list { background:rgba(255,255,255,0.98); border:1px solid var(--border); }
@@ -384,6 +404,7 @@
             body.is-logged-in .app-container { position:fixed; right:0; top:0; left:var(--sidebar-w); width:calc(100% - var(--sidebar-w)); max-width:none; height:100vh; border-radius:0; margin:0; display:flex; flex-direction:column; box-shadow:none; border:none; border-left:1px solid rgba(128,128,128,0.2); background:var(--bg-dark); overflow:hidden; }
             body.is-logged-in #desktop-topbar { display:flex; }
             body.is-logged-in #mobile-header-wrapper { display:none; }
+            body.is-logged-in #mobile-header-spacer { display:none; }
             body.is-logged-in #mobile-bottom-nav { display:none !important; }
             #scrollToTopBtn { bottom:24px; right:28px; }
             .view-section { padding:28px 36px; flex:1; min-height:0; padding-bottom:28px; opacity:0; transform:none; }
@@ -404,6 +425,7 @@
             body.is-logged-in .app-container { display:flex; flex-direction:column; position:fixed; left:68px; right:0; top:0; width:calc(100% - 68px); max-width:none; height:100vh; border-radius:0; margin:0; overflow:hidden; border:none; border-left:1px solid rgba(128,128,128,0.2); background:var(--bg-dark); }
             #desktop-topbar { display:flex; }
             #mobile-header-wrapper { display:none; }
+            #mobile-header-spacer { display:none; }
             #mobile-bottom-nav { display:none !important; }
             .view-section { padding:22px 24px; padding-bottom:22px; opacity:0; transform:none; }
             .view-section.active { display:block; opacity:1; overflow-y:auto; flex:1; min-height:0; animation:fadeIn 0.2s var(--ease) forwards; }
@@ -1418,7 +1440,8 @@
     function navTo(tabId) {
         document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
         const view = document.getElementById('view-' + tabId);
-        if (view) view.classList.add('active');
+        if (view) { view.classList.add('active'); view.scrollTop = 0; }
+        window.scrollTo({ top: 0, behavior: 'instant' });
         document.querySelectorAll('.sidebar-item[id^="snav-"]').forEach(i => i.classList.remove('active'));
         const sn = document.getElementById('snav-' + tabId);
         if (sn) sn.classList.add('active');
@@ -3263,24 +3286,21 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         const activeSection = document.querySelector('.view-section.active');
         const activeMainTab = activeSection ? activeSection.id : 'view-entry';
         let title = 'Help Guide', html = '';
-        if      (activeMainTab === 'view-kiosk')   { title='🔢 Standby Kiosk';      html='<ul><li>Select IN/OUT. The AI will recognize you and instantly punch your attendance.</li></ul>'; }
-        else if (activeMainTab === 'view-entry')   { title='📋 Attendance Entry';   html='<ul><li>Search employee, select action, then tap Punch IN/OUT. Works offline — syncs automatically on reconnect.</li></ul>'; }
-        else if (activeMainTab === 'view-history') { title='📜 History';             html='<ul><li>Filter by month, date, or employee name/ID. Admin/HR can edit records. Employees can submit Correction Requests.</li></ul>'; }
+        if      (activeMainTab === 'view-kiosk')     { title='🔢 Standby Kiosk';      html='<ul><li>Select IN/OUT. The AI will recognize you and instantly punch your attendance.</li></ul>'; }
+        else if (activeMainTab === 'view-entry')     { title='📋 Attendance Entry';   html='<ul><li>Search employee, select action, then tap Punch IN/OUT. Works offline — syncs automatically on reconnect.</li></ul>'; }
+        else if (activeMainTab === 'view-history')   { title='📜 History';             html='<ul><li>Filter by month, date, or employee name/ID. Admin/HR can edit records. Employees can submit Correction Requests.</li></ul>'; }
+        else if (activeMainTab === 'view-dashboard') { title='📊 Dashboard';           html='<ul><li>Live overview of today\'s attendance — total staff, present, punched out, on leave, and late arrivals.</li><li>Tap Enrolled Staff initials to jump to that employee\'s record.</li><li>Use Export CSV to download a monthly attendance report.</li></ul>'; }
+        else if (activeMainTab === 'view-payslip')   { title='📄 My Payslip';          html='<ul><li>Select a month and tap Get Payslip. Use the blue button to download as PDF.</li></ul>'; }
+        else if (activeMainTab === 'view-reports')   { title='📊 Reports';             html='<ul><li><b>Dashboard Reports:</b> Download a full monthly attendance matrix for all staff as Excel.</li><li><b>Employee Reports:</b> Generate and print a payslip for any employee for any month.</li></ul>'; }
         else if (activeMainTab === 'view-admin') {
-            const activeSubTab = document.querySelector('.sub-tab.active');
+            const activeSubTab = document.querySelector('#view-admin .sub-tab.active');
             const subId = activeSubTab ? activeSubTab.id : 'sub-btn-leave';
-            if      (subId === 'sub-btn-leave')  { title='📅 Leaves';         html='<ul><li>Mark single or bulk leave (EL or LOP) for any employee. Sundays and public holidays are automatically skipped.</li></ul>'; }
-            else if (subId === 'sub-btn-empl')   { title='👥 Employees';      html='<ul><li>Add, edit or delete employees. Enroll face data for kiosk recognition.</li></ul>'; }
-            else if (subId === 'sub-btn-user')   { title='🔐 Users';          html='<ul><li>Manage app login accounts. Admin only. Set Empl ID (column E) for Employee-role logins.</li></ul>'; }
-            else if (subId === 'rep-btn-dash')   { title='📊 Dashboard Reports'; html='<ul><li>Monthly Dashboard (attendance matrix) and Monthly Salary Report with live Excel formulas.</li></ul>'; }
-            else if (subId === 'rep-btn-emp')    { title='📄 Employee Reports';  html='<ul><li>Generate and print a payslip for any employee for any month.</li></ul>'; }
-            else if (subId === 'sub-btn-leave')   { title='⛱️ Leave';            html='<ul><li>Assign leave for any date. Deducts 1 day from balance automatically.</li></ul>'; }
-            else if (subId === 'sub-btn-empl')    { title='👥 Employees';        html='<ul><li>Add/edit employees and salary. Click Enroll Face to register AI recognition.</li></ul>'; }
-            else if (subId === 'sub-btn-user')    { title='🔐 App Users';        html='<ul><li>Create logins. Select role — Admin, HR, Standby, or Employee.</li></ul>'; }
-        } else if (activeMainTab === 'view-payslip') { title='📄 My Payslip';       html='<ul><li>Select a month and tap Get Payslip. Use the blue button to download as PDF.</li></ul>'; }
-        else if (activeMainTab === 'view-reports')   { title='📊 Dashboard Reports'; html='<ul><li>Select a month to download a complete Excel Matrix of all staff attendance.</li></ul>'; }
-        document.getElementById('tutorial-title').innerText   = title;
-        document.getElementById('tutorial-body').innerHTML    = html;
+            if      (subId === 'sub-btn-leave') { title='📅 Leaves';    html='<ul><li>Mark single or bulk leave (EL or LOP) for any employee. Sundays and public holidays are automatically skipped.</li></ul>'; }
+            else if (subId === 'sub-btn-empl')  { title='👥 Employees'; html='<ul><li>Add, edit or delete employees. Enroll face data for kiosk recognition. Set Empl ID for Employee-role logins.</li></ul>'; }
+            else if (subId === 'sub-btn-user')  { title='🔐 Users';     html='<ul><li>Manage app login accounts. Admin only. Roles: Admin — full access | HR — no user management | Security — entry &amp; history | Standby — kiosk only | Employee — own payslip &amp; history.</li></ul>'; }
+        }
+        document.getElementById('tutorial-title').innerText = title;
+        document.getElementById('tutorial-body').innerHTML  = html;
         document.getElementById('tutorial-modal').style.display = 'flex';
     }
 
