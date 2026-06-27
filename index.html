@@ -112,7 +112,7 @@
             border-bottom:1px solid rgba(255,255,255,0.04);
         }
         body.is-logged-in #mobile-header-wrapper { display:block; }
-        #mobile-header-spacer { display:none; height:118px; }
+        #mobile-header-spacer { display:none; height:122px; }
         @media(max-width:700px) { body.is-logged-in #mobile-header-spacer { display:block; } }
         .header { padding:18px 20px; background:linear-gradient(180deg,rgba(30,41,59,0.5) 0%,rgba(24,24,27,0.1) 100%); border-bottom:1px solid rgba(59,130,246,0.18); }
         .header-top { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:14px; }
@@ -127,35 +127,69 @@
         .user-badge    { font-size:12px; font-weight:500; background:rgba(128,128,128,0.1); padding:5px 14px; border-radius:18px; color:var(--text-muted); border:1px solid rgba(128,128,128,0.2); }
         .network-badge { font-size:12px; font-weight:600; padding:5px 14px; border-radius:18px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.1); color:var(--success); }
 
-        /* MOBILE BOTTOM NAV — Fuel-Tracker-style floating pill, always fixed */
+        /* MOBILE BOTTOM NAV — WhatsApp-style fixed full-width bottom bar */
         #mobile-bottom-nav {
-            display:none;
-            position:fixed;
-            bottom:14px;
-            left:50%;
-            transform:translateX(-50%);
-            width:92%;
-            max-width:430px;
-            background:rgba(5,5,7,0.96);
-            backdrop-filter:blur(20px);
-            border:1px solid rgba(255,255,255,0.06);
-            border-radius:28px;
-            padding:6px 4px calc(6px + env(safe-area-inset-bottom));
-            gap:0;
-            z-index:1000;
-            box-shadow:0 16px 48px rgba(0,0,0,0.8);
-            justify-content:space-around;
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-radius: 0;
+            padding: 0;
+            padding-bottom: env(safe-area-inset-bottom);
+            gap: 0;
+            z-index: 9999;
+            box-shadow: 0 -2px 16px rgba(0,0,0,0.3);
+            justify-content: space-around;
+            box-sizing: border-box;
         }
         body.is-logged-in #mobile-bottom-nav { display:flex; }
-        /* Mobile nav items — Fuel Tracker reference */
-        .mob-nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 10px; border-radius:20px; cursor:pointer; color:var(--text-muted); flex:1; min-height:52px; transition:all .2s var(--ease); -webkit-tap-highlight-color:transparent; justify-content:center; }
+        /* Mobile nav items — WhatsApp-style flat tabs */
+        .mob-nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 4px 8px; border-radius:0; cursor:pointer; color:var(--text-muted); flex:1; min-height:58px; transition:color .15s var(--ease), background .15s var(--ease); -webkit-tap-highlight-color:transparent; justify-content:center; }
         .mob-nav-item svg  { width:20px; height:20px; flex-shrink:0; }
         .mob-nav-item span { font-size:10px; font-weight:700; letter-spacing:.3px; text-transform:uppercase; }
-        .mob-nav-item.active   { color:var(--accent); background:rgba(59,130,246,0.1); }
+        .mob-nav-item.active   { color:var(--accent); background:rgba(59,130,246,0.07); }
         .mob-nav-item.hidden-mob { display:none !important; }
-        /* Content bottom padding — clears fixed bottom nav (~70px) */
+        /* Light mode nav bar */
+        body.light-mode #mobile-bottom-nav { box-shadow:0 -1px 8px rgba(0,0,0,0.08); }
+
+        /* Content bottom padding — clears fixed bottom nav */
         @media(max-width:700px) {
             .view-section { padding-bottom: 80px !important; }
+        }
+
+        /* ══ MOBILE WHATSAPP-STYLE FULL-SCREEN LAYOUT FIX ══
+           PROBLEM: .app-container has backdrop-filter:blur() which creates a new
+           stacking context in Safari/iOS WebKit. This causes position:fixed children
+           (the mobile header & bottom nav) to be fixed relative to the CONTAINER
+           instead of the VIEWPORT — so when the container height changes between
+           tabs, the nav bar appears to jump up and down.
+           FIX: On mobile, strip backdrop-filter from the container, remove body
+           padding, and make the app fill the full screen like a native app. */
+        @media(max-width:700px) {
+            body.is-logged-in {
+                padding: 0 !important;
+                align-items: stretch;
+            }
+            body.is-logged-in .app-container {
+                border-radius: 0 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                background: var(--bg-dark) !important;
+                border: none !important;
+                box-shadow: none !important;
+                margin-bottom: 0 !important;
+                animation: none !important;
+                min-height: 100dvh;
+            }
+            body.is-logged-in.light-mode .app-container {
+                background: var(--bg-dark) !important;
+            }
         }
 
         /* ── APP CONTAINER ── */
@@ -1108,6 +1142,26 @@
 </div>
 
 <script>
+    /* ══ CRITICAL LAYOUT FIX ══════════════════════════════════════════════════════
+       ROOT CAUSE: `backdrop-filter` on .app-container creates a new stacking
+       context in Safari / iOS WebKit. This traps position:fixed descendants
+       (mobile-header-wrapper, mobile-bottom-nav) so they are fixed to the
+       CONTAINER, not the VIEWPORT. When the container height changes between
+       tab switches, the header and nav bar jump around.
+
+       FIX: Immediately move both elements to <body> root so they are truly
+       viewport-fixed, independent of any ancestor stacking context.           */
+    (function relocateFixedOverlays() {
+        var hdr = document.getElementById('mobile-header-wrapper');
+        var nav = document.getElementById('mobile-bottom-nav');
+        if (hdr && hdr.parentElement !== document.body) {
+            document.body.insertBefore(hdr, document.body.firstChild);
+        }
+        if (nav && nav.parentElement !== document.body) {
+            document.body.appendChild(nav);
+        }
+    })();
+
     const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbzsV8eP3nMkVUva7WwHkDKi820Mv0BEm0kTxxM__EamMerhKdhxQJKtVRA0mSI0_EjK/exec";
 
     // MOD-01: Added emplId so Employee-role accounts link to their payslip via server
@@ -1505,13 +1559,21 @@
             if (sec) sec.style.display = 'block';
         }
 
-        // Mobile nav visibility
+        // Mobile nav visibility — use classList so CSS !important rule is properly controlled
         ['mnav-payslip','mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
+            if (el) { el.classList.add('hidden-mob'); el.style.display = ''; }
         });
-        if (isEmployee)  { const el = document.getElementById('mnav-payslip');   if(el) el.style.display = 'flex'; }
-        if (isAdminHR)   { ['mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='flex'; }); }
+        if (isEmployee) {
+            const el = document.getElementById('mnav-payslip');
+            if (el) el.classList.remove('hidden-mob');
+        }
+        if (isAdminHR) {
+            ['mnav-dashboard','mnav-reports','mnav-admin'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('hidden-mob');
+            });
+        }
 
         // Bell (Admin & HR only)
         ['bell-btn-desktop','bell-btn-mobile'].forEach(id => {
