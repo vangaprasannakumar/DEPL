@@ -1,28 +1,20 @@
+// ─── DEPL HRMS — SERVICE WORKER ───────────────────────────────────────────────
+// Handles caching, offline fallback, and background sync of attendance punches.
+// Dada Energies Pvt. Ltd. | Muppireddypally, Telangana
+
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
-// Paste your exact Google Apps Script Web App URL here.
+// Google Apps Script Web App URL — the single backend endpoint for all API calls.
 const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbzsV8eP3nMkVUva7WwHkDKi820Mv0BEm0kTxxM__EamMerhKdhxQJKtVRA0mSI0_EjK/exec";
 
 // ─── CACHE VERSIONING ─────────────────────────────────────────────────────────
-// MOD-07 / FIX ERR-12: CACHE_DATE is now auto-detected from the
-// <meta name="app-version" content="YYYYMMDD"> tag inside index.html.
-//
-// SETUP (one-time): Add this line inside index.html's <head>:
-//   <meta name="app-version" content="20260513">
-//
-// After that — update "content" whenever you deploy a new build.
-// The SW reads this value at install time and uses it as the cache key.
-// This means:
-//   • Forgetting to bump it == serving stale content (same as before)
-//   • BUT: the meta tag is RIGHT NEXT to the code that changes, so it's
-//     far more visible than a buried constant in sw.js.
-//
-// FALLBACK: If the meta tag is absent or unreadable, CACHE_DATE_FALLBACK
-// is used instead. Bump the fallback manually if you don't use the meta tag.
-const CACHE_VERSION      = 'capco-hrms-v6';
-const CACHE_DATE_FALLBACK = '20260513';   // ← bump this if NOT using meta tag
+// Cache name is auto-detected from <meta name="app-version" content="YYYYMMDD">
+// in index.html at SW install time. Update that meta tag on every deploy.
+// If the tag is absent or the fetch fails, CACHE_DATE_FALLBACK is used instead.
+const CACHE_VERSION       = 'depl-hrms-v1';
+const CACHE_DATE_FALLBACK = '20260628';   // ← bump this if NOT using the meta tag
 
 // ─── INDEXED DB CONFIGURATION ────────────────────────────────────────────────
-const DB_NAME    = 'CapcoOfflineDB';
+const DB_NAME    = 'DEPLOfflineDB';
 const STORE_NAME = 'pending_punches';
 
 // ─── FACE-API VERSION ─────────────────────────────────────────────────────────
@@ -106,16 +98,10 @@ async function clearAllPendingPunches() {
   });
 }
 
-// ─── MOD-07: AUTO CACHE-VERSION DETECTION ────────────────────────────────────
-// FIX ERR-12: Reads the app-version from the <meta name="app-version">
-// tag inside index.html at SW install time.
-//
-// This eliminates the manual CACHE_DATE bump from sw.js entirely.
-// The developer only needs to update the meta tag in index.html — which
-// lives right alongside the app code that's changing.
-//
-// If the fetch fails (offline install) or the tag is absent, we fall back
-// to CACHE_DATE_FALLBACK so the SW still installs correctly.
+// ─── AUTO CACHE-VERSION DETECTION ────────────────────────────────────────────
+// Reads <meta name="app-version"> from index.html at SW install time.
+// Update that meta tag on every deploy — no need to touch sw.js.
+// Falls back to CACHE_DATE_FALLBACK when offline or the tag is absent.
 async function readAppVersionFromHTML() {
   try {
     const response = await fetch('./index.html', {
@@ -142,9 +128,7 @@ async function readAppVersionFromHTML() {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
-      // FIX ERR-12: Resolve cache name dynamically before opening the cache.
-      // If the meta tag is found, its value drives the cache key.
-      // If not found, fall back to CACHE_DATE_FALLBACK.
+      // Resolve cache name from meta tag (or fallback) before opening the cache.
       const detectedDate = await readAppVersionFromHTML();
       const cacheDate    = detectedDate || CACHE_DATE_FALLBACK;
       const cacheName    = `${CACHE_VERSION}-${cacheDate}`;
@@ -192,7 +176,7 @@ self.addEventListener('install', (event) => {
 // The install and activate events run in different call stacks.
 // We persist the resolved cache name in a tiny IDB record so activate()
 // can read exactly the same name without re-fetching index.html.
-const META_DB_NAME  = 'CapcoSWMeta';
+const META_DB_NAME  = 'DEPLSWMeta';
 const META_STORE    = 'sw_meta';
 const META_KEY      = 'resolved_cache_name';
 
@@ -249,9 +233,10 @@ self.addEventListener('activate', (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map(name => {
-          // Only delete caches belonging to this app — avoids nuking
-          // other PWAs installed on the same origin.
-          if (name.startsWith('capco-hrms') && name !== currentCache) {
+          // Delete old capco-hrms caches (rebranding cleanup) and any
+          // stale depl-hrms caches — keep only the current cache name.
+          const isOurs = name.startsWith('depl-hrms') || name.startsWith('capco-hrms');
+          if (isOurs && name !== currentCache) {
             console.log(`[SW] 🗑️ Deleting old cache: ${name}`);
             return caches.delete(name);
           }
@@ -413,10 +398,8 @@ async function processBackgroundSync() {
 
       let result;
       try {
-        // FIX PERF: Added AbortController timeout (25 seconds) to the background
-        // sync POST. Without this, a stalled GAS response can hold the sync event
-        // open until the browser's background sync watchdog kills it with an
-        // unhelpful error — making the problem hard to diagnose in DevTools.
+        // 25-second timeout on each sync POST — prevents stalled GAS responses
+        // from holding the sync event open until the browser watchdog kills it.
         const controller  = new AbortController();
         const syncTimeout = setTimeout(() => controller.abort(), 25000);
 
@@ -441,21 +424,10 @@ async function processBackgroundSync() {
       if (result && result.status === 'success') {
         console.log(`[SW] ✅ Group synced — ${result.synced} sent, ${result.skipped} skipped.`);
 
-        // ── Selective IDB deletion ────────────────────────────────────────────
-        // Previously clearAllPendingPunches() wiped the entire queue even when
-        // some punches were skipped, causing silent data loss.
-        //
-        // Current behaviour:
-        //   • skipped === 0 → all synced, mark all IDB IDs for deletion.
-        //   • skipped > 0   → some were rejected (duplicate fingerprint, auth
-        //     error, etc.). We still remove them to prevent an infinite retry
-        //     loop, but log clearly so the discrepancy is visible in DevTools.
-        //
-        // Future upgrade: Code.gs returns a `processed: [fingerprint...]` array
-        // so we can match and delete only confirmed records. The server-side
-        // groundwork for this is already in place (syncOfflineData returns
-        // synced + skipped counts). When that upgrade ships, replace this block
-        // with per-fingerprint matching.
+        // Selective IDB deletion:
+        //   skipped === 0 → all synced cleanly.
+        //   skipped > 0   → some rejected (duplicate, auth error). We still
+        //     remove them to prevent an infinite retry loop; a warning is logged.
         if (result.skipped > 0) {
           console.warn(
             `[SW] ⚠️ ${result.skipped} punch(es) skipped by server ` +
@@ -521,7 +493,7 @@ function generateOfflineHTML() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Capco HRMS — Offline</title>
+  <title>DEPL HRMS — Offline</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -570,7 +542,7 @@ function generateOfflineHTML() {
     // Show how many offline punches are waiting so kiosk operators feel confident
     (function checkPending() {
       try {
-        const req = indexedDB.open('CapcoOfflineDB', 1);
+        const req = indexedDB.open('DEPLOfflineDB', 1);
         req.onsuccess = function() {
           const db = req.result;
           if (!db.objectStoreNames.contains('pending_punches')) return;
