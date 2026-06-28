@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Capco HR</title>
-    <link rel="icon" type="image/png" href="https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png">
+    <title>DEPL HRMS</title>
+    <link rel="icon" type="image/png" sizes="48x48"  href="https://i.postimg.cc/pVFqM3R8/DEPL-logo-launchericon-48x48.png">
+    <link rel="icon" type="image/png" sizes="72x72"  href="https://i.postimg.cc/qB3jHW4K/DEPL-logo-launchericon-72x72.png">
+    <link rel="icon" type="image/png" sizes="96x96"  href="https://i.postimg.cc/MZQdJgqV/DEPL-logo-launchericon-96x96.png">
+    <link rel="icon" type="image/png" sizes="144x144" href="https://i.postimg.cc/Y2WbBTM6/DEPL-logo-launchericon-144x144.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://i.postimg.cc/BZKMfR4c/DEPL-logo-launchericon-512x512.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#09090b">
     <!-- MOD-07 / FIX ERR-12: Bump this date on every deploy.
@@ -14,7 +20,7 @@
     <meta name="app-version" content="20260513">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Capco HR">
+    <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
@@ -112,7 +118,7 @@
             border-bottom:1px solid rgba(255,255,255,0.04);
         }
         body.is-logged-in #mobile-header-wrapper { display:block; }
-        #mobile-header-spacer { display:none; height:122px; }
+        #mobile-header-spacer { display:none; height:168px; }
         @media(max-width:700px) { body.is-logged-in #mobile-header-spacer { display:block; } }
         .header { padding:18px 20px; background:linear-gradient(180deg,rgba(30,41,59,0.5) 0%,rgba(24,24,27,0.1) 100%); border-bottom:1px solid rgba(59,130,246,0.18); }
         .header-top { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:14px; }
@@ -477,8 +483,8 @@
 <body>
 
 <div id="loader">
-    <img src="https://i.postimg.cc/C1fJDfZC/Capco-Logo.png?v=final" alt="Capco Logo">
-    <h3>CAPCO MASTER AI</h3>
+    <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo">
+    <h3>DEPL HRMS APP</h3>
 </div>
 
     <!-- BELL PANEL — Correction Requests (Admin & HR) -->
@@ -505,7 +511,7 @@
 </div>
 
 <div id="login-container">
-    <img src="https://i.postimg.cc/C1fJDfZC/Capco-Logo.png?v=final" alt="Capco Logo">
+    <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo">
     <h2>Security Portal</h2>
     <div style="display:flex;flex-direction:column;width:100%;">
         <input type="text" id="login-user" class="login-input" placeholder="Username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus();">
@@ -550,8 +556,8 @@
 
 <nav id="desktop-sidebar">
     <div class="sidebar-logo">
-        <img src="https://i.postimg.cc/C1fJDfZC/Capco-Logo.png?v=final" alt="Logo">
-        <div class="sidebar-logo-text"><h3>Capco HR</h3></div>
+        <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo">
+        <div class="sidebar-logo-text"><h3>DEPL HRMS</h3></div>
     </div>
     <div class="sidebar-nav">
         <div class="sidebar-section">Main</div>
@@ -630,7 +636,7 @@
         <div class="header">
             <div class="header-top">
                 <div class="app-branding">
-                    <img src="https://i.postimg.cc/C1fJDfZC/Capco-Logo.png?v=final" alt="Logo">
+                    <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo">
                     <h2>HRMS</h2>
                 </div>
                 <div class="header-actions">
@@ -662,6 +668,9 @@
         </div>
     </div>
 
+    <!-- Spacer: pushed here so EVERY view (including kiosk/Standby) clears the fixed header -->
+    <div id="mobile-header-spacer"></div>
+
     <!-- KIOSK VIEW -->
     <div id="view-kiosk" class="view-section">
         <div id="kiosk-home">
@@ -692,8 +701,6 @@
     </div>
 
     <!-- Spacer: reserves space for the fixed mobile header so content isn't hidden under it -->
-    <div id="mobile-header-spacer"></div>
-
     <!-- ENTRY VIEW -->
     <div id="view-entry" class="view-section active">
         <div class="dropdown-container">
@@ -1629,9 +1636,23 @@
                 document.body.classList.add('is-logged-in');
                 applyRolePermissions();
                 fetchAllData(false);
+                // Sync spacer to actual header height after DOM settles
+                requestAnimationFrame(() => adjustHeaderSpacer());
             } catch(e) { localStorage.removeItem('capco_attendance_user'); }
         }
     }
+
+    /* Dynamically match #mobile-header-spacer height to the real rendered
+       height of the fixed mobile header so no content ever slides under it. */
+    function adjustHeaderSpacer() {
+        const hdr    = document.getElementById('mobile-header-wrapper');
+        const spacer = document.getElementById('mobile-header-spacer');
+        if (!hdr || !spacer) return;
+        const h = hdr.getBoundingClientRect().height;
+        if (h > 0) spacer.style.height = h + 'px';
+    }
+    // Re-sync on resize / orientation change
+    window.addEventListener('resize', adjustHeaderSpacer);
 
     async function handleLogin() {
         if (GOOGLE_API_URL === "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") return showToast('Developer Error: Add API URL', 'error');
@@ -2860,8 +2881,8 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 
 <div class="header">
   <div>
-    <img src="https://i.postimg.cc/C1fJDfZC/Capco-Logo.png?v=final" alt="Capco Logo" style="height:48px;margin-bottom:8px;display:block;">
-    <div class="company-name">Capco Capacitor</div>
+    <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo" style="height:48px;margin-bottom:8px;display:block;">
+    <div class="company-name">DEPL</div>
     <div class="company-sub">Muppireddypally, Telangana<br>HR Department</div>
   </div>
   <div>
@@ -2919,7 +2940,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 </div>
 
 <div class="footer">
-  This is a computer-generated payslip and does not require a physical signature. &nbsp;|&nbsp; Capco Capacitor, Muppireddypally, Telangana
+  This is a computer-generated payslip and does not require a physical signature. &nbsp;|&nbsp; DEPL, Muppireddypally, Telangana
 </div>
 </body></html>`;
     }
@@ -3394,7 +3415,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         for (let i=0; i<byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
         const blob = new Blob([new Uint8Array(byteNumbers)], { type:'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob); link.download = `Capco_Attendance_${m}.csv`;
+        link.href = URL.createObjectURL(blob); link.download = `DEPL_Attendance_${m}.csv`;
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
         showToast('CSV Downloaded');
@@ -3614,7 +3635,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
             colDefs.forEach((cd, i) => { sheet.getColumn(i+1).width = cd.w; });
 
             // ── Row 1: Main title ─────────────────────────────────────────────
-            sheet.addRow([`CAPCO CAPACITOR  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
+            sheet.addRow([`DEPL  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
             sheet.mergeCells(1,1,1,26);
             Object.assign(sheet.getRow(1).getCell(1), {
                 style:{ font:{bold:true,size:12,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr }
