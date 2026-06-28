@@ -167,13 +167,13 @@
             .view-section { padding-bottom: 80px !important; }
         }
 
-        /* ══ MOBILE WHATSAPP-STYLE FULL-SCREEN LAYOUT FIX ══
+        /* ══ MOBILE FULL-SCREEN LAYOUT ══
            PROBLEM: .app-container has backdrop-filter:blur() which creates a new
            stacking context in Safari/iOS WebKit. This causes position:fixed children
            (the mobile header & bottom nav) to be fixed relative to the CONTAINER
            instead of the VIEWPORT — so when the container height changes between
            tabs, the nav bar appears to jump up and down.
-           FIX: On mobile, strip backdrop-filter from the container, remove body
+           SOLUTION: On mobile, strip backdrop-filter from the container, remove body
            padding, and make the app fill the full screen like a native app. */
         @media(max-width:700px) {
             body.is-logged-in {
@@ -1156,7 +1156,7 @@
        CONTAINER, not the VIEWPORT. When the container height changes between
        tab switches, the header and nav bar jump around.
 
-       FIX: Immediately move both elements to <body> root so they are truly
+       SOLUTION: Immediately move both elements to <body> root so they are truly
        viewport-fixed, independent of any ancestor stacking context.           */
     (function relocateFixedOverlays() {
         var hdr = document.getElementById('mobile-header-wrapper');
@@ -1171,8 +1171,7 @@
 
     const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbzsV8eP3nMkVUva7WwHkDKi820Mv0BEm0kTxxM__EamMerhKdhxQJKtVRA0mSI0_EjK/exec";
 
-    // MOD-01: Added emplId so Employee-role accounts link to their payslip via server
-    // response — no fragile name-matching needed (ERR-10 fix)
+    // emplId is null for Admin / HR / Security / Standby accounts.
     let currentUser = { username: '', role: '', token: '', emplId: null };
     let employeeList = []; let shiftsData = []; let historyData = []; let adminUsersCache = [];
     let modelsLoaded = false; let faceMatcher = null; let kioskInterval = null; let kioskTimer = null;
@@ -1187,7 +1186,7 @@
         navigator.serviceWorker.register('sw.js').catch(() => {});
         navigator.serviceWorker.addEventListener('message', event => {
             if (event.data && event.data.type === 'SYNC_COMPLETE') {
-                // FIX LOGIC: Use the synced count from the updated sw.js instead of a generic message
+                // Show how many offline punches were synced
                 const n = event.data.synced || 0;
                 showToast(`✅ ${n} offline punch${n !== 1 ? 'es' : ''} synced!`);
                 updatePendingBadge();
@@ -1240,8 +1239,7 @@
         });
     }
 
-    // FIX PERF: iOS Safari has no Background Sync API. When online event fires on iOS
-    // we directly read IDB and POST to the server instead of relying on the SW.
+    // iOS Safari: no Background Sync API — flush IDB manually when the app comes online.
     async function flushPendingPunchesManually() {
         try {
             const db = await openDB();
@@ -1386,7 +1384,7 @@
         }
     }
 
-    // FIX UX: Custom confirm replaces all native confirm()/alert() dialogs
+    // Promise-based confirm modal — replaces all native confirm()/alert() calls.
     let _confirmResolveCallback = null;
     function showConfirm(msg, { title='Confirm', okLabel='Confirm', danger=false, icon='⚠️' } = {}) {
         return new Promise(resolve => {
@@ -1406,7 +1404,7 @@
         if (_confirmResolveCallback) { _confirmResolveCallback(val); _confirmResolveCallback = null; }
     }
 
-    // UPGRADE #3: EL vs LOP leave type picker — returns 'EL', 'LOP', or null (cancelled)
+    // Leave type picker — returns 'EL', 'LOP', or null if cancelled.
     let _leaveTypeResolveCallback = null;
     function showLeaveTypeConfirm(empName, leaveBal) {
         return new Promise(resolve => {
@@ -1429,8 +1427,7 @@
         }
     }
 
-    // ── API with AbortController timeout ──
-    // FIX PERF: Added 30-second timeout so the UI never freezes forever on a stalled GAS response
+    // ── API (30-second timeout prevents UI freeze on stalled GAS responses) ──
     async function callGoogleAPI(payload) {
         if (payload.action !== 'login' && currentUser && currentUser.token) {
             payload._token = currentUser.token;
@@ -1475,7 +1472,7 @@
             // Chrome/Android: Background Sync API
             navigator.serviceWorker.ready.then(sw => sw.sync.register('sync-punches').catch(e => console.log(e)));
         } else {
-            // FIX PERF: iOS Safari fallback — flush IDB directly when app is online
+            // iOS Safari fallback — flush IDB directly (no Background Sync)
             await flushPendingPunchesManually();
         }
     });
@@ -1491,7 +1488,6 @@
     }
 
     // ── NAVIGATION ──
-    // MOD-03: Renamed 'Inventory' → 'Admin Panel' — the label was misleading in an HR app
     const PAGE_TITLES = {
         entry:     'Attendance Entry',
         history:   'History',
@@ -1668,7 +1664,7 @@
         btn.disabled = false; btn.innerText = 'Login';
         if (res.status === 'success') {
             const expires = Date.now() + (5.5 * 60 * 60 * 1000);
-            // MOD-01: Persist emplId so Employee-role payslip works without name-matching (ERR-10)
+            // emplId links Employee-role accounts to their payslip; null for Admin/HR/Security/Standby.
             const userData = {
                 username: res.username,
                 role:     res.role,
@@ -1702,11 +1698,8 @@
             employeeList = data.employees; shiftsData = data.shifts;
             populateDropdowns(data.employees);
             if (currentUser.role === 'Employee') {
-                // FIX ERR-10: Use emplId returned by the server at login (stored in currentUser.emplId).
-                // The old code matched by username === employee name or ID — if two employees share a
-                // name, the first match wins and the second employee sees the wrong payslip.
-                // Now: server sets emplId in Users sheet column E → verifyLogin returns it → stored here.
-                // Fallback to ID-only match (not name) for legacy accounts that predate column E.
+                // Use server-returned emplId — avoids name-match collisions when employees share a name.
+                // Legacy accounts without column E populated fall back to ID-only matching.
                 if (currentUser.emplId) {
                     myEmplId = currentUser.emplId;
                 } else {
@@ -1849,15 +1842,14 @@
                         startKioskTimer();
                         isKioskScanning = true;
 
-                        // UPG-03: 2-of-3 frame confirmation counter.
-                        // A single-frame match can fire on a look-alike or partial face walking past.
-                        // We require 2 consecutive positives for the same empId before punching.
+                        // 2-of-3 frame confirmation — requires 2 consecutive matches before punching
+                        // to avoid false positives from look-alikes or partial faces.
                         let frameHits = {};   // { empId: consecutiveHitCount }
 
                         async function kioskScanLoop() {
                             if (!isKioskScanning) return;
                             try {
-                                // FIX PERF: inputSize 160 instead of 320 — 4× faster on mobile GPU
+                                // inputSize 160 (not 320) — 4× faster inference on mobile GPU
                                 const detection = await faceapi
                                     .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.3 }))
                                     .withFaceLandmarks().withFaceDescriptor();
@@ -1872,7 +1864,7 @@
                                     if (bestMatch.label !== 'unknown') {
                                         const empId = bestMatch.label;
 
-                                        // UPG-03: Increment hit counter for this empId, reset all others
+                                        // Increment hit count for matched employee; reset all others
                                         Object.keys(frameHits).forEach(k => { if (k !== empId) frameHits[k] = 0; });
                                         frameHits[empId] = (frameHits[empId] || 0) + 1;
 
@@ -1892,8 +1884,7 @@
                                             status.style.color = 'var(--success)';
                                             status.innerText = `✅ ${empName} — Punch ${actionStr} Successful`;
 
-                                            // FIX ERR-02 (client): Pass category so Code.gs avoids
-                                            // an extra getEmployees() call for the SOT bonus check
+                                            // Pass category so Code.gs skips a redundant getEmployees() call on punch-out
                                             callGoogleAPI({
                                                 action: 'logAttendance',
                                                 emplId: emp ? emp.id : empId,
@@ -1975,9 +1966,8 @@
     function stopKioskMode() {
         isKioskScanning = false;
         clearTimeout(kioskInterval); clearInterval(kioskTimer);
-        // FIX BUG: Always dismiss the success overlay before closing.
-        // Previously if the 120s timer fired while the overlay was showing,
-        // it stayed permanently visible until the page refreshed.
+        // Dismiss success overlay first — if the 120s timer fires while it is
+        // showing, it would otherwise stay permanently visible.
         hideKioskSuccess();
         const video = document.getElementById('kiosk-video');
         if (video && video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
@@ -2048,7 +2038,7 @@
                                 if (detection) {
                                     faceapi.draw.drawDetections(overlay, faceapi.resizeResults(detection, overlay));
                                     collectedDescriptors.push(Array.from(detection.descriptor));
-                                    // FIX UX: Update visual progress bar
+                                    // Update enrolment progress dots
                                     document.querySelectorAll('.ep-dot').forEach((d, i) => {
                                         d.classList.toggle('filled', i < collectedDescriptors.length);
                                     });
@@ -2094,7 +2084,7 @@
     }
 
     // ── DROPDOWNS & DEBOUNCING ──
-    // FIX UX: Per-dropdown debounce timers so typing in one doesn't cancel another
+    // Per-dropdown debounce — typing in one input doesn't cancel another's timer.
     const _ddTimers = {};
     function filterDropdownDebounced(inputId, listId, hiddenId) {
         clearTimeout(_ddTimers[listId]);
@@ -2125,7 +2115,7 @@
         document.getElementById(listId).style.display = 'block';
     }
 
-    // FIX PERF: Build full HTML strings first, then assign once
+    // Build full HTML strings first, assign once — avoids repeated DOM reflows.
     function populateDropdowns(data) {
         const le = document.getElementById('empl-dropdown-list');
         const ll = document.getElementById('leave-empl-dropdown-list');
@@ -2193,8 +2183,7 @@
                 else if (res.status === 'LEAVE') badge.style.color = 'var(--danger)';
                 else                              badge.style.color = 'var(--warning)';
 
-                // UPGRADE #7: If the employee already has a punch-in record today,
-                // pre-select the shift they came in on so HR doesn't have to guess.
+                // Pre-select today's shift from the live status so HR doesn't have to guess.
                 const emp = employeeList.find(e => e.id.toString() === id.toString());
                 if (res.todayShift && emp && emp.category === 'Staff With OT') {
                     const sel = document.getElementById('entry-shift-select');
@@ -2221,7 +2210,7 @@
             const emp = employeeList.find(e => e.id.toString() === emplId.toString());
             if (!emp) { status.style.color='var(--danger)'; status.innerText='System Error: Reload app.'; return; }
 
-            // UPGRADE #3: EL vs LOP — show leave type choice when marking leave
+            // Show EL/LOP picker when marking leave; force LOP if no EL balance remains.
             let leaveType = 'EL';
             if (action === 'leave') {
                 const hasEL   = (emp.leaveBal || 0) > 0;
@@ -2250,16 +2239,14 @@
                 if (ss && ss.value) selectedShift = ss.value;
             }
 
-            // FIX UX: Disable all action buttons while request in-flight to prevent double-submit
+            // Disable action buttons during the API call to prevent double-submit.
             const actionBtns = ['btn-in','btn-out','btn-perm','btn-leave'];
             actionBtns.forEach(id => { const b=document.getElementById(id); if(b){b.disabled=true;} });
 
             if (!navigator.onLine) {
-                // FIX BUG: Wrap in try/catch — IndexedDB throws in private/incognito mode
+                // IDB throws in private/incognito mode — wrap in try/catch.
                 try {
-                    // FIX ERR-08: Include leaveType in offline payload.
-                    // Previously it was missing — synced LOP leaves became EL and deducted
-                    // from the leave balance when they shouldn't have.
+                    // leaveType must be in the offline payload — omitting it converts LOP→EL on sync.
                     await savePendingPunch({
                         _token: currentUser.token, _u: currentUser.username,
                         emplId: emp.id, emplName: emp.name, action, remarks,
@@ -2284,8 +2271,7 @@
             }
 
             status.style.color = 'var(--text-muted)'; status.innerText = 'Recording...';
-            // FIX ERR-02 (client): Pass emp.category so Code.gs skips the extra
-            // getEmployees() call inside logAttendance() for the SOT bonus check.
+            // Pass category so Code.gs skips a redundant getEmployees() call on punch-out.
             const res = await callGoogleAPI({ action:'logAttendance', emplId:emp.id, emplName:emp.name, type:action, remarks, loggedByUser:currentUser.username, offlineTimeIso:null, selectedShift, leaveType, category:emp.category });
 
             actionBtns.forEach(id => { const b=document.getElementById(id); if(b) b.disabled=false; });
@@ -2303,11 +2289,8 @@
                 document.getElementById('live-status-badge').style.display  = 'none';
                 document.getElementById('shift-select-container').style.display = 'none';
                 status.innerText = '';
-                // FIX ERR-09: A full fetchAllData(true) was called after every single punch —
-                // reloading ALL 35+ employee records + shifts each time. During a busy
-                // shift-change window this creates 20+ redundant API calls that hit GAS quota.
-                // Fix: Only refresh the status badge for the punched employee.
-                // The employee list, shifts, and face matcher don't change between punches.
+                // Refresh only this employee's status badge — not the full list,
+                // which is expensive and unchanged between punches.
                 fetchLiveStatus(emp.id);
             } else { status.style.color='var(--danger)'; status.innerText=res.message; }
         } catch(err) { showToast('Error: ' + err.message, 'error'); }
@@ -2683,10 +2666,7 @@
         if (!employeeList) return;
         const list  = document.getElementById('empdash-dropdown-list');
         if (!list) return;
-        // FIX: Always rebuild and add data-id + data-text so the document-level
-        // click handler receives real values instead of undefined.
-        // Previously items had inline onclick but no data attrs, so event delegation
-        // called chooseEmpDash(undefined, undefined) → "undefined" in the input.
+        // Rebuild with data-id + data-text on every call — event delegation requires them.
         list.innerHTML = '';
         employeeList.forEach(emp => {
             const display = `${emp.id} — ${safeStr(emp.name)}`;
@@ -2765,9 +2745,7 @@
         const sandwichRow  = (data.sandwichDays > 0)
             ? `<div class="emp-dash-row" style="color:var(--danger);"><span>Sandwich Deductions:</span><span style="color:var(--danger);font-weight:600;">- ${data.sandwichDays} day${data.sandwichDays>1?'s':''}</span></div>`
             : '';
-        // FIX: Attendance % must use WORKING days (monthDays - ph) as denominator.
-        // Old: present / monthDays = 22/28 = 79% ← WRONG (includes PH+Sundays in denominator)
-        // New: present / workingDays = 22/22 = 100% ← CORRECT
+        // Use working days (not total month days) as attendance % denominator.
         const workingDays  = Math.max(1, data.monthDays - data.ph);
         const attendPct    = Math.min(100, Math.round((data.present / workingDays) * 100));
 
@@ -2967,10 +2945,8 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         renderPayslipToDiv(data, 'mypayslip-results');
     }
 
-    // FIX PRINT: currentPayslipHTML is a complete <!DOCTYPE html> document.
-    // Injecting it into a <div> via innerHTML causes the browser to strip all
-    // <html>/<head>/<body> tags including the inline <style> block → blank page.
-    // Fix: open a new window and write the full document directly into it.
+    // currentPayslipHTML is a full <!DOCTYPE html> document — write via window.open()
+    // not innerHTML, which strips <head>/<style> tags and produces a blank page.
     function downloadPayslip() {
         if (!currentPayslipHTML) { showToast('Generate a payslip first.', 'warn'); return; }
         showToast('Opening Print Dialog...');
@@ -3022,7 +2998,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         if (!historyData || historyData.length === 0) return (div.innerHTML = '<p style="text-align:center;color:var(--text-muted);">No records found.</p>');
 
         if (isSingleEmp) {
-            // FIX UX: Added Permission column to the single-employee table view
+            // Single-employee view — includes Date, Shift, In, Out, Permission, OT columns.
             let tableHTML = `<div class="history-table-container"><div class="history-table-header"><h3 style="margin:0;color:var(--accent);font-size:15px;">${safeStr(String(data[0].emplId))} — ${safeStr(data[0].emplName)}</h3><p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">Records: ${data.length}</p></div><div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>In</th><th>Out</th><th>Perm</th><th>OT</th>${(currentUser.role==='Admin'||currentUser.role==='HR')?'<th>Edit</th>':'<th>Req</th>'}</tr></thead><tbody>`;
             data.forEach((r, idx) => {
                 const editBtn = (currentUser.role==='Admin'||currentUser.role==='HR')
@@ -3066,7 +3042,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     async function submitCorrectionReq() {
-        // FIX BUG: Guard against null myEmplId before calling .toString()
+        // Guard: myEmplId is null for non-Employee roles.
         if (!myEmplId) { showToast('Account not linked to an Employee ID.', 'error'); return; }
         const date    = document.getElementById('corr-date').value;
         const details = document.getElementById('corr-details').value;
@@ -3094,7 +3070,6 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     async function resolveRequest(row) {
-        // FIX UX: Custom confirm instead of native confirm()
         const ok = await showConfirm('Mark this correction request as resolved?', { title:'Resolve Request', okLabel:'Mark Resolved' });
         if (!ok) return;
         const res = await callGoogleAPI({ action: 'resolveCorrection', row, user: currentUser.username });
@@ -3102,10 +3077,8 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     // ── ADMIN: LEAVE ──
-    // FIX ERR-11: The old preview only excluded Sundays. The server also skips public
-    // holidays, so the actual days marked may be fewer than the preview showed.
-    // Since the frontend doesn't cache the holiday list, we update the label to clearly
-    // communicate the "may be lower" caveat instead of showing a potentially wrong count.
+    // Preview counts working days (excl. Sundays) but the server also skips
+    // public holidays — label includes a "may be lower" caveat.
     function updateLeaveDayCount() {
         const from  = document.getElementById('leave-date-from').value;
         const to    = document.getElementById('leave-date-to').value;
@@ -3120,7 +3093,6 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
             if (cur.getDay() !== 0) count++;
             cur.setDate(cur.getDate() + 1);
         }
-        // FIX ERR-11: Clearly note that public holidays reduce the final count further
         text.innerText = `📅 Up to ${count} working day${count !== 1 ? 's' : ''} selected (${from} → ${to}) — public holidays also excluded`;
         box.style.display = 'block';
     }
@@ -3145,7 +3117,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         const cur = new Date(fDate);
         while (cur <= tDate) { if (cur.getDay() !== 0) estDays++; cur.setDate(cur.getDate() + 1); }
 
-        // UPGRADE #3: EL vs LOP — show picker if employee has EL balance, otherwise force LOP
+        // Show EL/LOP picker; force LOP if no EL balance remaining.
         let leaveType = 'EL';
         const hasEL   = emp && (emp.leaveBal || 0) > 0;
 
@@ -3198,7 +3170,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         }
     }
 
-    // FIX PERF: Use textContent instead of innerText — avoids forced layout reflow on every keyup
+    // textContent (not innerText) — avoids forced layout reflow on every keyup.
     function filterAdminCards(containerId, query) {
         const f     = query.toLowerCase();
         const cards = document.getElementById(containerId).getElementsByClassName('card');
@@ -3222,7 +3194,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         const outVal  = document.getElementById('edit-att-out').value;
         const permVal = document.getElementById('edit-att-perm').value;
         const remVal  = document.getElementById('edit-att-rem').value;
-        // FIX BUG: Validate before sending — Code.gs will reject empty times anyway but this saves a round trip
+        // Validate locally before sending — saves a round trip to GAS.
         if (!inVal && !outVal) { showToast('At least one time field (In or Out) is required.', 'error'); return; }
         const btn     = document.getElementById('btn-save-att');
         btn.disabled  = true; btn.innerText = 'Saving...';
@@ -3237,7 +3209,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         const data = await callGoogleAPI({ action: 'getAdminUsersData' }); adminUsersCache = data;
         let html = '';
         data.forEach((u, idx) => {
-            // MOD-01: Show emplId (col E) in user cards for Employee-role accounts
+            // Show emplId badge on Employee-role user cards.
             const emplIdTag = (u.role === 'Employee' && u.emplId)
                 ? `<p style="font-size:11.5px;color:var(--accent);">Emp ID: ${safeStr(u.emplId)}</p>`
                 : '';
@@ -3259,8 +3231,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
             document.getElementById('user-pass').placeholder = 'Leave blank to keep current password';
             const delBtn = document.getElementById('btn-del-user');
             delBtn.style.display = 'block';
-            // FIX MOD-06: Disable Delete button when editing own account.
-            // An Admin deleting themselves locks the system with no recovery path.
+            // Disable Delete for own account — self-deletion locks the system.
             if (u.username === currentUser.username) {
                 delBtn.disabled = true;
                 delBtn.title    = 'Cannot delete your own account';
@@ -3285,7 +3256,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 
     async function saveAdminUser() {
         document.getElementById('user-modal-error').innerText = 'Saving...';
-        // MOD-01: Include emplId (column E) so Employee-role accounts link to payslip without name-matching
+        // emplId (col E) links Employee-role accounts to their payslip record.
         const res = await callGoogleAPI({
             action:   'saveUser',
             row:      document.getElementById('user-row').value,
@@ -3300,7 +3271,6 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     async function deleteAdminUser() {
-        // FIX UX: Custom confirm
         const ok = await showConfirm('Delete this user? They will lose all access immediately.', { title:'Delete User', okLabel:'Delete', danger:true, icon:'🗑️' });
         if (!ok) return;
         const res = await callGoogleAPI({ action:'deleteUser', row:document.getElementById('user-row').value, user:currentUser.username, role:currentUser.role });
@@ -3352,7 +3322,6 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     async function deleteAdminEmpl() {
-        // FIX UX: Custom confirm
         const ok = await showConfirm('Delete this employee? Their attendance history will remain but they will be removed from the employee list.', { title:'Delete Employee', okLabel:'Delete', danger:true, icon:'🗑️' });
         if (!ok) return;
         const res = await callGoogleAPI({ action:'deleteEmpl', row:document.getElementById('empl-row').value, user:currentUser.username, role:currentUser.role });
@@ -3546,10 +3515,8 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
     }
 
     // ── EXPORT MONTHLY SALARY REPORT ─────────────────────────────────────────
-    // PERF FIX: Previous version used eachCell({includeEmpty:true}) on every
-    // data row (26 cols × 35 employees = 910 per-cell style objects) causing a
-    // 15-minute browser hang. Now: column-level styles set ONCE, row values
-    // added in bulk, formulas assigned per-cell only where needed.
+    // Column styles set once; row values written in bulk — avoids per-cell style
+    // objects (26 cols × 35 employees = 910+) that caused a ~15 min browser hang.
     async function downloadSalaryReport() {
         const m = document.getElementById('report-salary-month').value;
         if (!m) { showToast('Please select a month.', 'warn'); return; }
