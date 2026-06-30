@@ -17,7 +17,7 @@
          sw.js reads this at install time and uses it as the cache key,
          so the old stale cache is automatically evicted on the next visit.
          Format: YYYYMMDD -->
-    <meta name="app-version" content="20260513">
+    <meta name="01.15" content="20260513">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
@@ -519,6 +519,9 @@
         <button type="button" class="btn-main" id="btn-login-submit" onclick="handleLogin()">Login</button>
     </div>
     <p id="login-msg" style="color:var(--danger);font-size:13px;margin-top:14px;font-weight:500;"></p>
+    <p style="margin-top:10px;">
+        <a href="javascript:void(0)" onclick="openPasswordReset()" style="color:var(--text-muted);font-size:13px;text-decoration:underline;">Forgot password?</a>
+    </p>
 </div>
 
 <!-- FIX UX: Custom confirm modal replaces all native confirm() / alert() dialogs -->
@@ -551,6 +554,39 @@
             <button class="btn-main" style="background:transparent;border:2px solid rgba(128,128,128,0.2);color:var(--text-main);box-shadow:none;" onclick="_confirmResolve(false)">Cancel</button>
             <button class="btn-main" id="confirm-ok-btn" onclick="_confirmResolve(true)">Confirm</button>
         </div>
+    </div>
+</div>
+
+<!-- Self-service password reset — two-step flow inside one modal -->
+<div class="modal" id="pwreset-modal">
+    <div class="modal-content" style="max-width:380px;text-align:center;">
+        <div style="font-size:40px;margin-bottom:12px;">🔐</div>
+
+        <!-- Step 1: request a reset code -->
+        <div id="pwreset-step1">
+            <h3 style="margin-top:0;margin-bottom:8px;color:var(--text-main);">Reset Password</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Enter your username. A 6-digit code will be emailed to the address on file.</p>
+            <input type="text" id="pwreset-username" class="login-input" placeholder="Username" style="margin-bottom:14px;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button class="btn-main" id="pwreset-step1-btn" onclick="submitPasswordResetRequest()">Send Reset Code</button>
+                <button class="btn-main" style="background:transparent;border:2px solid rgba(128,128,128,0.2);color:var(--text-muted);box-shadow:none;" onclick="closePasswordReset()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Step 2: enter code + new password -->
+        <div id="pwreset-step2" style="display:none;">
+            <h3 style="margin-top:0;margin-bottom:8px;color:var(--text-main);">Enter Reset Code</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Check the registered email for a 6-digit code. It expires in 15 minutes.</p>
+            <input type="text" id="pwreset-code" class="login-input" placeholder="6-digit code" maxlength="6" inputmode="numeric" style="margin-bottom:10px;text-align:center;letter-spacing:4px;font-size:18px;">
+            <input type="password" id="pwreset-newpass" class="login-input" placeholder="New password (min 6 characters)" style="margin-bottom:10px;">
+            <input type="password" id="pwreset-newpass-confirm" class="login-input" placeholder="Confirm new password" style="margin-bottom:14px;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <button class="btn-main" id="pwreset-step2-btn" onclick="submitPasswordReset()">Reset Password</button>
+                <button class="btn-main" style="background:transparent;border:2px solid rgba(128,128,128,0.2);color:var(--text-muted);box-shadow:none;" onclick="closePasswordReset()">Cancel</button>
+            </div>
+        </div>
+
+        <p id="pwreset-msg" style="font-size:13px;margin-top:14px;font-weight:500;min-height:18px;"></p>
     </div>
 </div>
 
@@ -893,6 +929,11 @@
             <div class="stat-box" style="color:var(--danger);"><div class="stat-icon-wrap" style="background:rgba(239,68,68,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="stat-content"><h3 id="dash-leave" style="color:var(--danger);">--</h3><p>On Leave</p></div></div>
             <div class="stat-box" style="color:var(--warning);"><div class="stat-icon-wrap" style="background:rgba(245,158,11,0.15);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-content"><h3 id="dash-late" style="color:var(--warning);">--</h3><p>Late Arrivals</p></div></div>
         </div>
+
+        <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:10px;display:block;">Present by Category</label>
+            <div id="dash-category-breakdown" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
         <div style="border-top:1px solid rgba(128,128,128,0.1);padding-top:18px;margin-top:8px;">
             <label style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;display:block;">Enrolled Staff (Biometrics)</label>
             <div id="enrolled-avatars" class="avatar-scroll"></div>
@@ -954,6 +995,7 @@
             <div id="leave-day-preview" style="display:none;margin-top:10px;padding:11px 16px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);border-radius:12px;font-size:13px;">
                 <span id="leave-day-count-text" style="color:var(--text-main);font-weight:600;"></span>
                 <span style="color:var(--text-muted);font-size:12px;display:block;margin-top:3px;">Sundays and public holidays in the range are automatically skipped.</span>
+                <div id="leave-calendar-grid" style="margin-top:12px;"></div>
             </div>
             <label for="leave-remarks" style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;margin-top:4px;display:block;">Reason</label>
             <input type="text" id="leave-remarks" placeholder="e.g. Annual Leave, Sick Leave, Medical">
@@ -1175,6 +1217,11 @@
     let currentUser = { username: '', role: '', token: '', emplId: null };
     let employeeList = []; let shiftsData = []; let historyData = []; let adminUsersCache = [];
     let modelsLoaded = false; let faceMatcher = null; let kioskInterval = null; let kioskTimer = null;
+    // Decrypted face descriptors, keyed by emplId. Populated by buildFaceMatcher()
+    // from the getKioskFaceData action (server decrypts; plaintext never sits in
+    // employeeList or column Q at rest). Freshly-enrolled faces are added directly
+    // here too, so a new enrollment works immediately without a round trip.
+    let decryptedFaceDataCache = {};
     let currentAction = 'in'; let recentlyPunched = []; let currentPayslipHTML = ""; let currentPayslipTitle = "";
     let activeEnrollId = null; let myEmplId = null;
     let isKioskScanning = false; let isEnrollScanning = false;
@@ -1417,6 +1464,70 @@
     function _leaveTypeResolve(val) {
         document.getElementById('leave-type-modal').style.display = 'none';
         if (_leaveTypeResolveCallback) { _leaveTypeResolveCallback(val); _leaveTypeResolveCallback = null; }
+    }
+
+    // ── SELF-SERVICE PASSWORD RESET ──
+    // Two-step flow: request a 6-digit code by username, then submit the code
+    // with a new password. Both steps go through callGoogleAPI's public-action
+    // path (no session token required, since the user isn't logged in yet).
+    function openPasswordReset() {
+        document.getElementById('pwreset-step1').style.display = 'block';
+        document.getElementById('pwreset-step2').style.display = 'none';
+        document.getElementById('pwreset-username').value = document.getElementById('login-user').value || '';
+        document.getElementById('pwreset-code').value = '';
+        document.getElementById('pwreset-newpass').value = '';
+        document.getElementById('pwreset-newpass-confirm').value = '';
+        document.getElementById('pwreset-msg').innerText = '';
+        document.getElementById('pwreset-modal').style.display = 'flex';
+    }
+    function closePasswordReset() {
+        document.getElementById('pwreset-modal').style.display = 'none';
+    }
+
+    async function submitPasswordResetRequest() {
+        const username = document.getElementById('pwreset-username').value.trim();
+        const msg = document.getElementById('pwreset-msg');
+        if (!username) { msg.style.color = 'var(--danger)'; msg.innerText = 'Enter your username.'; return; }
+
+        const btn = document.getElementById('pwreset-step1-btn');
+        btn.disabled = true; btn.innerText = 'Sending...';
+        const res = await callGoogleAPI({ action: 'requestPasswordReset', username });
+        btn.disabled = false; btn.innerText = 'Send Reset Code';
+
+        // Server always returns a generic success message — never reveals
+        // whether the username exists, so we just move to step 2 either way.
+        msg.style.color = 'var(--text-muted)';
+        msg.innerText = (res && res.message) ? res.message : 'If that username exists, a code has been sent.';
+        document.getElementById('pwreset-step1').style.display = 'none';
+        document.getElementById('pwreset-step2').style.display = 'block';
+    }
+
+    async function submitPasswordReset() {
+        const username = document.getElementById('pwreset-username').value.trim();
+        const code     = document.getElementById('pwreset-code').value.trim();
+        const newPass  = document.getElementById('pwreset-newpass').value;
+        const confirm  = document.getElementById('pwreset-newpass-confirm').value;
+        const msg = document.getElementById('pwreset-msg');
+
+        if (!code || code.length !== 6) { msg.style.color = 'var(--danger)'; msg.innerText = 'Enter the 6-digit code from your email.'; return; }
+        if (newPass.length < 6) { msg.style.color = 'var(--danger)'; msg.innerText = 'New password must be at least 6 characters.'; return; }
+        if (newPass !== confirm) { msg.style.color = 'var(--danger)'; msg.innerText = 'Passwords do not match.'; return; }
+
+        const btn = document.getElementById('pwreset-step2-btn');
+        btn.disabled = true; btn.innerText = 'Resetting...';
+        const res = await callGoogleAPI({ action: 'resetPassword', username, code, newPassword: newPass });
+        btn.disabled = false; btn.innerText = 'Reset Password';
+
+        if (res && res.status === 'success') {
+            showToast('Password reset successfully — you can now log in.');
+            closePasswordReset();
+            document.getElementById('login-user').value = username;
+            document.getElementById('login-pass').value = '';
+            document.getElementById('login-pass').focus();
+        } else {
+            msg.style.color = 'var(--danger)';
+            msg.innerText = (res && res.message) ? res.message : 'Reset failed. Try requesting a new code.';
+        }
     }
 
     function playSuccessSound(name) {
@@ -1709,7 +1820,7 @@
                 }
             }
             if (isRefresh) {
-                if (modelsLoaded) buildFaceMatcher();
+                if (modelsLoaded) await buildFaceMatcher();
             } else {
                 updateNetworkBadges(true);
                 if (currentUser.role === 'Standby' || currentUser.role === 'Admin' || currentUser.role === 'HR') loadAIModels();
@@ -1727,7 +1838,7 @@
 
     let modelsFailed = false;
     async function loadAIModels() {
-        if (modelsLoaded) { buildFaceMatcher(); return; }
+        if (modelsLoaded) { await buildFaceMatcher(); return; }
         if (modelsFailed) { showToast('AI models failed. Check internet and reload.', 'error'); return; }
         try {
             if (!window.faceapi) {
@@ -1744,7 +1855,7 @@
             await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
             await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
             modelsLoaded = true;
-            buildFaceMatcher();
+            await buildFaceMatcher();
             try {
                 const wc = document.createElement('canvas'); wc.width = 160; wc.height = 160;
                 await faceapi.detectSingleFace(wc, new faceapi.TinyFaceDetectorOptions({ inputSize: 160 }));
@@ -1757,13 +1868,23 @@
     }
 
     const FACE_MATCH_THRESHOLD = 0.6;
-    function buildFaceMatcher() {
+    async function buildFaceMatcher() {
         if (!window.faceapi) return;
+        // emp.faceData in employeeList is encrypted at rest — fetch the decrypted
+        // set from the server (cached there for 15 min) rather than parsing it locally.
+        try {
+            const res = await callGoogleAPI({ action: 'getKioskFaceData' });
+            if (res && res.status === 'success' && Array.isArray(res.data)) {
+                res.data.forEach(d => { decryptedFaceDataCache[d.id.toString()] = d.faceData; });
+            }
+        } catch (e) { /* offline or error — fall back to whatever is already cached locally */ }
+
         const ld = [];
         employeeList.forEach(emp => {
-            if (emp.faceData && emp.faceData !== '') {
+            const raw = decryptedFaceDataCache[emp.id.toString()];
+            if (raw) {
                 try {
-                    const parsed      = JSON.parse(emp.faceData);
+                    const parsed      = JSON.parse(raw);
                     const descriptors = Array.isArray(parsed[0])
                         ? parsed.map(d => new Float32Array(d))
                         : [new Float32Array(parsed)];
@@ -2050,8 +2171,12 @@
                                         if (res && res.status === 'success') {
                                             status.innerText = 'Enrolled Successfully!'; showToast('Face Enrolled Successfully');
                                             const emp = employeeList.find(e => e.id == activeEnrollId);
-                                            if (emp) emp.faceData = dataString;
-                                            buildFaceMatcher(); setTimeout(stopEnrollment, 1500);
+                                            // Server stores the encrypted blob; we already have the plaintext
+                                            // we just captured, so seed the decrypted cache directly instead
+                                            // of waiting on a round trip to getKioskFaceData.
+                                            decryptedFaceDataCache[activeEnrollId.toString()] = dataString;
+                                            if (emp) emp.faceData = 'ENC1:pending-refresh';  // truthy placeholder for "enrolled" badge
+                                            await buildFaceMatcher(); setTimeout(stopEnrollment, 1500);
                                         } else {
                                             status.className = 'status-error'; status.innerText = 'Save Failed: ' + (res ? res.message : 'Network error');
                                             collectedDescriptors = [];
@@ -2689,8 +2814,41 @@
             document.getElementById('dash-out').innerText     = stats.outNow;
             document.getElementById('dash-leave').innerText   = stats.leave;
             document.getElementById('dash-late').innerText    = stats.late;
+            renderCategoryBreakdown(stats.byCategory || {});
         }
         renderDashboardAvatars();
+    }
+
+    const CATEGORY_COLORS = {
+        'Staff Without OT': '#6366f1',
+        'Staff With OT':    '#3b82f6',
+        'Staff With SOT':   '#10b981'
+    };
+    function renderCategoryBreakdown(byCategory) {
+        const container = document.getElementById('dash-category-breakdown');
+        if (!container) return;
+        const categories = Object.keys(byCategory);
+        if (categories.length === 0) { container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);margin:0;">No attendance data for today yet.</p>'; return; }
+
+        let html = '';
+        categories.forEach(cat => {
+            const c       = byCategory[cat];
+            const total   = c.total || 0;
+            const present = c.present || 0;
+            const pct     = total > 0 ? Math.round((present / total) * 100) : 0;
+            const color   = CATEGORY_COLORS[cat] || '#64748b';
+            html += `
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                        <span style="color:var(--text-main);font-weight:500;">${cat}</span>
+                        <span style="color:var(--text-muted);">${present} / ${total} present${c.leave ? ` · ${c.leave} on leave` : ''}</span>
+                    </div>
+                    <div style="background:rgba(128,128,128,0.15);border-radius:6px;height:8px;overflow:hidden;">
+                        <div style="background:${color};height:100%;width:${pct}%;border-radius:6px;transition:width 0.4s ease;"></div>
+                    </div>
+                </div>`;
+        });
+        container.innerHTML = html;
     }
 
     function renderDashboardAvatars() {
@@ -2732,7 +2890,7 @@
     }
 
     // ── PAYSLIP ──
-    function renderPayslipToDiv(data, targetDivId) {
+    async function renderPayslipToDiv(data, targetDivId, monthStr) {
         currentPayslipHTML  = '';
         currentPayslipTitle = `Payslip_${data.month}_${data.year}_${safeStr(data.emplName).replace(/\s+/g,'_')}`;
         const resDiv = document.getElementById(targetDivId);
@@ -2748,6 +2906,28 @@
         // Use working days (not total month days) as attendance % denominator.
         const workingDays  = Math.max(1, data.monthDays - data.ph);
         const attendPct    = Math.min(100, Math.round((data.present / workingDays) * 100));
+
+        // Year-to-date summary (April 1 → selected month). Best-effort — if the
+        // fetch fails or is slow, the payslip still renders without it.
+        let ytd = null;
+        if (monthStr) {
+            try {
+                const ytdRes = await callGoogleAPI({ action: 'getYTDSummary', emplId: data.emplId, month: monthStr });
+                if (ytdRes && ytdRes.status === 'success') ytd = ytdRes;
+            } catch (e) { /* non-critical — payslip works without YTD */ }
+        }
+        const ytdBoxHTML = ytd ? `
+<div class="emp-dash-box" style="border-color:#8b5cf6;background:rgba(139,92,246,0.05);">
+  <h4 style="color:#8b5cf6;">📊 Year-to-Date Summary <span style="float:right;font-size:11px;color:var(--text-muted);font-weight:400;">${safeStr(ytd.fyLabel)} (${ytd.monthsCounted} mo.)</span></h4>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+    <div class="emp-dash-row">YTD Gross: <span>₹${ytd.totalGross.toLocaleString('en-IN')}</span></div>
+    <div class="emp-dash-row">YTD Net Pay: <span style="font-weight:600;">₹${ytd.totalNet.toLocaleString('en-IN')}</span></div>
+    <div class="emp-dash-row">YTD Deductions: <span style="color:var(--danger);">₹${ytd.totalDeductions.toLocaleString('en-IN')}</span></div>
+    <div class="emp-dash-row">YTD OT Hours: <span>${ytd.totalOT} hrs</span></div>
+    <div class="emp-dash-row">YTD Present Days: <span style="color:var(--success);">${ytd.totalPresent}</span></div>
+    <div class="emp-dash-row">YTD Leaves Availed: <span style="color:var(--danger);">${ytd.totalLeaves}</span></div>
+  </div>
+</div>` : '';
 
         // ── In-app payslip view ──
         resDiv.innerHTML = `
@@ -2816,6 +2996,8 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
   </div>
   <div style="font-size:11.5px;color:var(--text-muted);text-align:right;font-style:italic;">(Rupees ${wordsNet})</div>
 </div>
+
+${ytdBoxHTML}
 
 <button class="btn-main" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 14px rgba(37,99,235,0.35);" onclick="downloadPayslip()">🖨️ Download PDF Payslip</button>`;
 
@@ -2912,6 +3094,23 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
   <div class="net-amount">₹ ${roundedNet.toLocaleString('en-IN')}</div>
 </div>
 
+${ytd ? `
+<div class="info-box" style="margin-bottom:14px;border-color:#8b5cf6;background:#faf5ff;">
+  <h3 style="color:#7c3aed;">Year-to-Date Summary — ${safeStr(ytd.fyLabel)} (${ytd.monthsCounted} month${ytd.monthsCounted !== 1 ? 's' : ''})</h3>
+  <div class="info-grid" style="margin-bottom:0;">
+    <div>
+      <div class="info-row"><span class="lbl">YTD Gross</span><span class="val">₹${ytd.totalGross.toLocaleString('en-IN')}</span></div>
+      <div class="info-row"><span class="lbl">YTD Deductions</span><span class="val" style="color:#dc2626;">₹${ytd.totalDeductions.toLocaleString('en-IN')}</span></div>
+      <div class="info-row"><span class="lbl">YTD Net Pay</span><span class="val" style="color:#059669;">₹${ytd.totalNet.toLocaleString('en-IN')}</span></div>
+    </div>
+    <div>
+      <div class="info-row"><span class="lbl">YTD OT Hours</span><span class="val">${ytd.totalOT} hrs</span></div>
+      <div class="info-row"><span class="lbl">YTD Present Days</span><span class="val" style="color:#059669;">${ytd.totalPresent}</span></div>
+      <div class="info-row"><span class="lbl">YTD Leaves Availed</span><span class="val" style="color:#dc2626;">${ytd.totalLeaves}</span></div>
+    </div>
+  </div>
+</div>` : ''}
+
 <div class="sign-row">
   <div class="sign-box">Employee Signature</div>
   <div class="sign-box">Authorised Signatory</div>
@@ -2931,7 +3130,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         showLoader('payslip');
         const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: id, month: m });
         hideLoader();
-        renderPayslipToDiv(data, 'empdash-results');
+        await renderPayslipToDiv(data, 'empdash-results', m);
     }
 
     async function generateMyPayslip() {
@@ -2942,7 +3141,7 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         showLoader('payslip');
         const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: myEmplId, month: m });
         hideLoader();
-        renderPayslipToDiv(data, 'mypayslip-results');
+        await renderPayslipToDiv(data, 'mypayslip-results', m);
     }
 
     // currentPayslipHTML is a full <!DOCTYPE html> document — write via window.open()
@@ -3078,15 +3277,17 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 
     // ── ADMIN: LEAVE ──
     // Preview counts working days (excl. Sundays) but the server also skips
-    // public holidays — label includes a "may be lower" caveat.
+    // public holidays — label includes a "may be lower" caveat. The calendar
+    // grid below gives a visual confirmation of exactly which days are selected.
     function updateLeaveDayCount() {
         const from  = document.getElementById('leave-date-from').value;
         const to    = document.getElementById('leave-date-to').value;
         const box   = document.getElementById('leave-day-preview');
         const text  = document.getElementById('leave-day-count-text');
+        const grid  = document.getElementById('leave-calendar-grid');
         if (!from || !to) { box.style.display = 'none'; return; }
         const fDate = new Date(from), tDate = new Date(to);
-        if (tDate < fDate) { text.innerText = '⚠️ "To" date must be on or after "From" date.'; box.style.display = 'block'; return; }
+        if (tDate < fDate) { text.innerText = '⚠️ "To" date must be on or after "From" date.'; grid.innerHTML = ''; box.style.display = 'block'; return; }
         let count = 0;
         const cur = new Date(fDate);
         while (cur <= tDate) {
@@ -3095,6 +3296,56 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
         }
         text.innerText = `📅 Up to ${count} working day${count !== 1 ? 's' : ''} selected (${from} → ${to}) — public holidays also excluded`;
         box.style.display = 'block';
+        renderLeaveCalendarGrid(fDate, tDate, grid);
+    }
+
+    const LEAVE_CAL_MAX_MONTHS = 3;  // cap render size for unusually long ranges
+    function renderLeaveCalendarGrid(fromDate, toDate, container) {
+        const months = [];
+        const cursor = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
+        const last   = new Date(toDate.getFullYear(), toDate.getMonth(), 1);
+        while (cursor <= last && months.length < LEAVE_CAL_MAX_MONTHS) {
+            months.push(new Date(cursor));
+            cursor.setMonth(cursor.getMonth() + 1);
+        }
+
+        const dayLabels = ['S','M','T','W','T','F','S'];
+        let html = '<div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:flex-start;">';
+
+        months.forEach(monthStart => {
+            const year       = monthStart.getFullYear();
+            const month      = monthStart.getMonth();
+            const monthName  = monthStart.toLocaleString('default', { month: 'long' });
+            const firstDay   = new Date(year, month, 1).getDay();
+            const daysInMon  = new Date(year, month + 1, 0).getDate();
+
+            html += `<div style="min-width:200px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:6px;">${monthName} ${year}</div>
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">`;
+            dayLabels.forEach(l => {
+                html += `<div style="text-align:center;font-size:10px;color:var(--text-muted);font-weight:600;">${l}</div>`;
+            });
+            for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+            for (let d = 1; d <= daysInMon; d++) {
+                const cellDate  = new Date(year, month, d);
+                const isSunday  = cellDate.getDay() === 0;
+                const inRange   = cellDate >= new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate())
+                                && cellDate <= new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate());
+                let bg = 'transparent', color = 'var(--text-main)', weight = '400';
+                if (inRange && isSunday) { bg = 'rgba(100,116,139,0.18)'; color = 'var(--text-muted)'; }
+                else if (inRange)        { bg = 'var(--accent)'; color = '#fff'; weight = '600'; }
+                else if (isSunday)       { color = 'var(--text-muted)'; }
+                html += `<div style="text-align:center;font-size:11px;padding:4px 0;border-radius:5px;background:${bg};color:${color};font-weight:${weight};">${d}</div>`;
+            }
+            html += `</div></div>`;
+        });
+
+        html += '</div>';
+        if (months.length >= LEAVE_CAL_MAX_MONTHS && last > months[months.length - 1]) {
+            html += `<p style="font-size:11px;color:var(--text-muted);margin:8px 0 0;">Range spans more than ${LEAVE_CAL_MAX_MONTHS} months — showing the first ${LEAVE_CAL_MAX_MONTHS}.</p>`;
+        }
+        container.innerHTML = html;
     }
 
     async function submitAdminLeave() {
