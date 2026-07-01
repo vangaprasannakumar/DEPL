@@ -15,10 +15,12 @@
     <meta name="theme-color" content="#09090b">
     <!-- sw.js reads this value at install time and uses it as the cache key,
          so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
-    <meta name="V01.15" content="20260701">
+    <meta name="app-version" content="20260701b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
@@ -64,9 +66,9 @@
         #login-container h2 { margin:0 0 24px; font-weight:700; font-size:22px; color:var(--text-main); }
 
         /* ── INPUTS & BUTTONS ── */
-        .login-input, select, input[type="text"], input[type="date"], input[type="month"], input[type="number"], input[type="time"], input[type="password"], textarea { width:100%; padding:15px 18px; margin:8px 0; border-radius:14px; border:1px solid var(--border); background:rgba(0,0,0,0.35); color:var(--text-main); font-family:'Outfit'; font-size:15px !important; box-sizing:border-box; transition:all 0.25s var(--ease); appearance:auto; }
+        .login-input, select, input[type="text"], input[type="date"], input[type="month"], input[type="number"], input[type="time"], input[type="password"], textarea { width:100%; padding:15px 18px; margin:8px 0; border-radius:14px; border:1px solid var(--border); background:rgba(0,0,0,0.35); color:var(--text-main); font-family:inherit; font-size:15px !important; box-sizing:border-box; transition:all 0.25s var(--ease); appearance:auto; }
         .login-input:focus, select:focus, input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,246,0.18); background:rgba(0,0,0,0.55); }
-        .btn-main { width:100%; padding:15px; background:linear-gradient(135deg,var(--accent),var(--accent-hover)); color:white; border:none; border-radius:14px; font-weight:600; font-size:15px; cursor:pointer; margin-top:14px; transition:all 0.2s var(--ease); box-shadow:0 4px 14px rgba(59,130,246,0.35); font-family:'Outfit'; }
+        .btn-main { width:100%; padding:15px; background:linear-gradient(135deg,var(--accent),var(--accent-hover)); color:white; border:none; border-radius:14px; font-weight:600; font-size:15px; cursor:pointer; margin-top:14px; transition:all 0.2s var(--ease); box-shadow:0 4px 14px rgba(59,130,246,0.35); font-family:inherit; }
         .btn-main:hover  { transform:translateY(-2px); box-shadow:0 8px 20px rgba(59,130,246,0.45); filter:brightness(1.08); }
         .btn-main:active { transform:translateY(1px) scale(0.98); }
         .btn-main:disabled { opacity:0.55; cursor:not-allowed; transform:none; box-shadow:none; filter:none; }
@@ -118,7 +120,7 @@
         }
         body.is-logged-in #mobile-header-wrapper { display:block; }
         #mobile-header-spacer { display:none; height:168px; }
-        @media(max-width:700px) { body.is-logged-in #mobile-header-spacer { display:block; } }
+        @media(max-width:767px) { body.is-logged-in #mobile-header-spacer { display:block; } }
         .header { padding:18px 20px; background:linear-gradient(180deg,rgba(30,41,59,0.5) 0%,rgba(24,24,27,0.1) 100%); border-bottom:1px solid rgba(59,130,246,0.18); }
         .header-top { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:14px; }
         .app-branding { display:flex; align-items:center; gap:10px; }
@@ -162,7 +164,7 @@
         body.light-mode #mobile-bottom-nav { box-shadow:0 -1px 8px rgba(0,0,0,0.08); }
 
         /* Content bottom padding — clears fixed bottom nav */
-        @media(max-width:700px) {
+        @media(max-width:767px) {
             .view-section { padding-bottom: 80px !important; }
         }
 
@@ -172,7 +174,7 @@
            whenever the container's height changes between tabs. Stripping
            backdrop-filter on mobile and letting the app fill the full screen
            (like a native app) avoids that stacking context entirely. */
-        @media(max-width:700px) {
+        @media(max-width:767px) {
             body.is-logged-in {
                 padding: 0 !important;
                 align-items: stretch;
@@ -203,7 +205,7 @@
 
         /* ── ACTION BUTTONS ── */
         .btn-grid   { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:18px; }
-        .btn-action { padding:16px; border:none; border-radius:16px; font-weight:700; font-size:15px; color:white; cursor:pointer; transition:all 0.2s var(--ease); box-shadow:0 4px 14px rgba(0,0,0,0.2); text-transform:uppercase; font-family:'Outfit'; letter-spacing:0.5px; }
+        .btn-action { padding:16px; border:none; border-radius:16px; font-weight:700; font-size:15px; color:white; cursor:pointer; transition:all 0.2s var(--ease); box-shadow:0 4px 14px rgba(0,0,0,0.2); text-transform:uppercase; font-family:inherit; letter-spacing:0.5px; }
         .btn-action:disabled { opacity:0.55; cursor:not-allowed; transform:none; box-shadow:none; }
         .bg-in    { background:linear-gradient(135deg,var(--success),#059669) !important; color:white !important; }
         .bg-out   { background:linear-gradient(135deg,var(--danger),#dc2626) !important;  color:white !important; }
@@ -212,7 +214,7 @@
 
         /* ── VIDEO / AI ── */
         .kiosk-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:22px; }
-        .kiosk-btn  { padding:24px 14px; font-size:17px; border:none; border-radius:18px; color:white; font-weight:bold; cursor:pointer; transition:all 0.2s var(--ease); text-transform:uppercase; letter-spacing:1px; font-family:'Outfit'; }
+        .kiosk-btn  { padding:24px 14px; font-size:17px; border:none; border-radius:18px; color:white; font-weight:bold; cursor:pointer; transition:all 0.2s var(--ease); text-transform:uppercase; letter-spacing:1px; font-family:inherit; }
         .video-container { position:relative; width:100%; max-width:400px; margin:0 auto; border-radius:20px; overflow:hidden; border:3px solid var(--accent); box-shadow:0 10px 30px rgba(59,130,246,0.2); display:none; background:#000; }
         video  { width:100%; height:auto; display:block; transform:scaleX(-1); }
         canvas { position:absolute; top:0; left:0; width:100%; height:100%; transform:scaleX(-1); }
@@ -275,7 +277,7 @@
         /* !important needed here — the browser's user-agent stylesheet resets
            font via the shorthand `font` property on <button>, which otherwise
            overrides the inherited font-family from body. */
-        button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: 'Outfit', sans-serif !important; }
+        button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: inherit !important; }
 
         /* ── BELL NOTIFICATION ── */
         .bell-btn { position:relative; background:none; border:1px solid rgba(128,128,128,0.2); border-radius:12px; width:38px; height:38px; display:none; justify-content:center; align-items:center; cursor:pointer; transition:all 0.2s; color:var(--text-muted); flex-shrink:0; padding:0; }
@@ -311,7 +313,7 @@
         #help-panel-body li { margin-bottom:9px; }
         #help-panel-body li:last-child { margin-bottom:0; }
         #help-panel-body strong { color:var(--text-main); }
-        @media(max-width:700px) {
+        @media(max-width:767px) {
             /* --mobile-header-h is kept in sync with the real rendered header
                height by adjustHeaderSpacer(), so this stays correct even if
                the header's height varies slightly by device/font rendering. */
@@ -320,7 +322,7 @@
 
         /* ── EXCEL-STYLE SALARY EMPLOYEE FILTER DROPDOWN ── */
         .salary-filter-wrap      { position:relative; margin-top:14px; }
-        .salary-filter-trigger   { width:100%; display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; cursor:pointer; font-family:'Outfit',sans-serif !important; font-size:14px; color:var(--text-main); transition:all 0.2s; }
+        .salary-filter-trigger   { width:100%; display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:12px; cursor:pointer; font-family:inherit !important; font-size:14px; color:var(--text-main); transition:all 0.2s; }
         .salary-filter-trigger:hover { border-color:var(--accent); }
         .salary-filter-trigger.open  { border-color:var(--accent); border-radius:12px 12px 0 0; }
         .salary-filter-trigger .sf-label { display:flex; align-items:center; gap:8px; }
@@ -332,7 +334,7 @@
         .salary-filter-panel.open { display:block; }
         /* Search row */
         .sf-search-row { padding:10px 12px; border-bottom:1px solid rgba(128,128,128,0.12); display:flex; gap:8px; align-items:center; }
-        .sf-search-input { flex:1; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-main); font-size:13px; font-family:'Outfit',sans-serif !important; outline:none; }
+        .sf-search-input { flex:1; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:8px; padding:7px 12px; color:var(--text-main); font-size:13px; font-family:inherit !important; outline:none; }
         .sf-search-input::placeholder { color:var(--text-muted); }
         .sf-search-input:focus { border-color:var(--accent); }
         /* Master row */
@@ -406,7 +408,7 @@
         .sub-tabs-container { overflow-x:auto; margin-bottom:18px; border-radius:14px; padding-bottom:4px; scrollbar-width:none; }
         .sub-tabs-container::-webkit-scrollbar { display:none; }
         .sub-tabs { display:flex; gap:6px; background:rgba(128,128,128,0.1); padding:5px; border:1px solid rgba(128,128,128,0.1); min-width:max-content; border-radius:14px; }
-        .sub-tab { flex:1; padding:9px 14px; border-radius:10px; border:none; background:transparent; color:var(--text-muted); font-family:'Outfit'; font-size:13px; font-weight:600; cursor:pointer; transition:0.2s; }
+        .sub-tab { flex:1; padding:9px 14px; border-radius:10px; border:none; background:transparent; color:var(--text-muted); font-family:inherit; font-size:13px; font-weight:600; cursor:pointer; transition:0.2s; }
         .sub-tab.active { background:var(--surface-hover); color:var(--text-main); box-shadow:0 4px 12px rgba(0,0,0,0.3); border:1px solid rgba(128,128,128,0.1); }
 
         /* ── STATS GRID ── */
