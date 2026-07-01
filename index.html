@@ -13,11 +13,9 @@
     <link rel="apple-touch-icon" href="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#09090b">
-    <!-- MOD-07 / FIX ERR-12: Bump this date on every deploy.
-         sw.js reads this at install time and uses it as the cache key,
-         so the old stale cache is automatically evicted on the next visit.
-         Format: YYYYMMDD -->
-    <meta name="app-version" content="20260513">
+    <!-- sw.js reads this value at install time and uses it as the cache key,
+         so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
+    <meta name="V01.15" content="20260701">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
@@ -168,14 +166,12 @@
             .view-section { padding-bottom: 80px !important; }
         }
 
-        /* ══ MOBILE FULL-SCREEN LAYOUT ══
-           PROBLEM: .app-container has backdrop-filter:blur() which creates a new
-           stacking context in Safari/iOS WebKit. This causes position:fixed children
-           (the mobile header & bottom nav) to be fixed relative to the CONTAINER
-           instead of the VIEWPORT — so when the container height changes between
-           tabs, the nav bar appears to jump up and down.
-           SOLUTION: On mobile, strip backdrop-filter from the container, remove body
-           padding, and make the app fill the full screen like a native app. */
+        /* .app-container's backdrop-filter:blur() creates a new stacking context
+           in Safari/iOS WebKit, which would trap the fixed mobile header and
+           bottom nav to the container instead of the viewport, making them jump
+           whenever the container's height changes between tabs. Stripping
+           backdrop-filter on mobile and letting the app fill the full screen
+           (like a native app) avoids that stacking context entirely. */
         @media(max-width:700px) {
             body.is-logged-in {
                 padding: 0 !important;
@@ -226,7 +222,7 @@
         .status-error   { background:rgba(239,68,68,0.15);   color:var(--danger);  border:1px solid rgba(239,68,68,0.3);  }
         #timer-display  { font-size:20px; font-weight:bold; color:var(--warning); text-align:center; margin-top:12px; }
 
-        /* FIX UX: Enrollment progress bar dots */
+        /* Enrollment progress dots — filled in as each face sample is captured */
         .ep-dot { width:28px; height:8px; border-radius:4px; background:rgba(128,128,128,0.2); border:1px solid rgba(128,128,128,0.1); transition:background 0.3s, transform 0.2s; }
         .ep-dot.filled { background:var(--success); border-color:var(--success); transform:scaleY(1.25); }
 
@@ -245,8 +241,8 @@
         #global-loader.hiding  { animation:overlayOut 0.3s var(--ease) forwards; }
         .gl-icon  { font-size:52px; animation:floatUp 2s ease-in-out infinite; line-height:1; }
         .gl-ring  { width:56px; height:56px; border-radius:50%; border:3px solid rgba(59,130,246,0.15); border-top-color:var(--accent); animation:spin 0.8s linear infinite; }
-        .gl-msg   { font-size:16px; font-weight:600; color:var(--text-main); text-align:center; max-width:260px; line-height:1.4; }
-        .gl-sub   { font-size:13px; color:var(--text-muted); }
+        .gl-msg   { font-size:16px; font-weight:600; color:#f4f4f5; text-align:center; max-width:260px; line-height:1.4; }
+        .gl-sub   { font-size:13px; color:#a1a1aa; }
         .gl-dots  { display:flex; gap:6px; }
         .gl-dot   { width:8px; height:8px; border-radius:50%; background:var(--accent); opacity:0.3; animation:gl-pulse 1.2s ease-in-out infinite; }
         .gl-dot:nth-child(2) { animation-delay:0.2s; }
@@ -276,9 +272,9 @@
         }
         .pending-pill.visible { display:inline-flex; align-items:center; gap:3px; }
 
-        /* FIX FONT: Buttons do not inherit font-family from body in all browsers.
-           !important is required to override the browser user-agent stylesheet
-           which resets font via the font shorthand on <button> elements. */
+        /* !important needed here — the browser's user-agent stylesheet resets
+           font via the shorthand `font` property on <button>, which otherwise
+           overrides the inherited font-family from body. */
         button, .btn-action, .kiosk-btn, .sub-tab, .er-btn, .range-toggle { font-family: 'Outfit', sans-serif !important; }
 
         /* ── BELL NOTIFICATION ── */
@@ -426,9 +422,6 @@
         body.light-mode { --bg-dark:#f1f5f9; --surface:#ffffff; --surface-hover:#f8fafc; --border:#e2e8f0; --text-main:#0f172a; --text-muted:#64748b; --sidebar-bg:#ffffff; }
         body.light-mode .app-container { background:var(--surface); border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.05); }
         body.light-mode #desktop-topbar { background:rgba(255,255,255,0.95); border-bottom:1px solid var(--border); }
-        /* Mobile header never got the light-mode override the desktop topbar has —
-           background stayed hardcoded black while --text-main correctly flipped to
-           near-black, making the "HRMS" title and other header text invisible. */
         body.light-mode #mobile-header-wrapper { background:rgba(255,255,255,0.95); border-bottom:1px solid var(--border); }
         body.light-mode #mobile-header-wrapper .header { background:linear-gradient(180deg,rgba(255,255,255,0.6) 0%,rgba(248,250,252,0.2) 100%); border-bottom:1px solid var(--border); }
         body.light-mode .card, body.light-mode .stat-box, body.light-mode .emp-dash-box { background:rgba(0,0,0,0.02); border-color:rgba(0,0,0,0.06); }
@@ -440,6 +433,11 @@
         body.light-mode .sub-tabs { background:rgba(0,0,0,0.05); border-color:var(--border); }
         body.light-mode .history-table td { color:var(--text-main); }
         body.light-mode .avatar-circle { background:var(--surface); box-shadow:0 4px 10px rgba(0,0,0,0.05); }
+        body.light-mode #login-container { background:rgba(255,255,255,0.92); border-color:var(--border); box-shadow:0 24px 60px rgba(0,0,0,0.12); }
+        body.light-mode .live-clock-container { background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.25); }
+        /* Shared by the History filter and the Monthly Salary Report filter — one rule covers both. */
+        body.light-mode .salary-filter-trigger, body.light-mode .sf-search-input { background:var(--surface-hover); }
+        body.light-mode .sub-scroll-btn { background:rgba(255,255,255,0.92); }
 
         /* ── MODALS ── */
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); backdrop-filter:blur(10px); z-index:10000; justify-content:center; align-items:center; }
@@ -560,8 +558,7 @@
     </p>
 </div>
 
-<!-- FIX UX: Custom confirm modal replaces all native confirm() / alert() dialogs -->
-<!-- UPGRADE #3: EL vs LOP leave type selection modal -->
+<!-- EL vs LOP leave type selection modal -->
 <div class="modal" id="leave-type-modal">
     <div class="modal-content" style="max-width:360px;text-align:center;">
         <div style="font-size:40px;margin-bottom:12px;">📅</div>
@@ -581,6 +578,7 @@
     </div>
 </div>
 
+<!-- Promise-based confirm dialog, used in place of native confirm()/alert() throughout the app -->
 <div class="modal" id="confirm-modal">
     <div class="modal-content" style="text-align:center;max-width:360px;">
         <div id="confirm-icon" style="font-size:40px;margin-bottom:12px;">⚠️</div>
@@ -1114,7 +1112,6 @@
     <div class="modal-content">
         <h3 style="margin-top:0;color:var(--text-main);border-bottom:1px solid rgba(128,128,128,0.2);padding-bottom:10px;">Edit Record (Audited)</h3>
         <input type="hidden" id="edit-att-row">
-        <!-- FIX UX: for= attributes on all labels -->
         <label for="edit-att-in">In Time</label><input type="time" id="edit-att-in">
         <label for="edit-att-out">Out Time</label><input type="time" id="edit-att-out">
         <label for="edit-att-perm">Perm Out</label><input type="time" id="edit-att-perm">
@@ -1159,7 +1156,6 @@
         <h3 style="margin-top:0;color:var(--text-main);border-bottom:1px solid rgba(128,128,128,0.2);padding-bottom:10px;" id="empl-modal-title">Employee Details</h3>
         <input type="hidden" id="empl-row">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <!-- FIX UX: for= on all labels -->
             <div><label for="empl-id">ID</label><input type="text" id="empl-id"></div>
             <div><label for="empl-name">Name</label><input type="text" id="empl-name"></div>
             <div><label for="empl-shift">Shift</label><select id="empl-shift"></select></div>
@@ -1191,7 +1187,6 @@
     <div class="modal-content">
         <h3 style="margin-top:0;color:var(--text-main);border-bottom:1px solid rgba(128,128,128,0.2);padding-bottom:10px;" id="user-modal-title">User Details</h3>
         <input type="hidden" id="user-row">
-        <!-- FIX UX: for= on labels -->
         <label for="user-name">Username <span style="font-size:11px;color:var(--accent);">(Employee role: use exact Employee ID)</span></label>
         <input type="text" id="user-name">
         <label for="user-role">Role</label>
@@ -1202,8 +1197,6 @@
             <option value="Employee" selected>Employee</option>
         </select>
         <label for="user-email">Email</label><input type="text" id="user-email">
-        <!-- MOD-01: Employee ID links this login to the payslip engine (ERR-10 fix).
-             Fill this only for Employee-role accounts. Leave blank for Admin/HR/Security. -->
         <label for="user-empl-id">Employee ID <span style="font-size:11px;color:var(--text-muted);">(Employee role only — links to payslip)</span></label>
         <input type="text" id="user-empl-id" placeholder="e.g. 8 — leave blank for Admin/HR/Security">
         <label for="user-pass">Password</label>
@@ -1218,15 +1211,13 @@
 </div>
 
 <script>
-    /* ══ CRITICAL LAYOUT FIX ══════════════════════════════════════════════════════
-       ROOT CAUSE: `backdrop-filter` on .app-container creates a new stacking
-       context in Safari / iOS WebKit. This traps position:fixed descendants
-       (mobile-header-wrapper, mobile-bottom-nav) so they are fixed to the
-       CONTAINER, not the VIEWPORT. When the container height changes between
-       tab switches, the header and nav bar jump around.
-
-       SOLUTION: Immediately move both elements to <body> root so they are truly
-       viewport-fixed, independent of any ancestor stacking context.           */
+    /* .app-container uses backdrop-filter, which creates a new stacking context
+       in Safari / iOS WebKit. Position:fixed descendants (mobile-header-wrapper,
+       mobile-bottom-nav) would be fixed relative to that container instead of
+       the viewport, so their position would jump whenever the container's
+       height changes between tab switches. Moving both elements to <body> root
+       keeps them genuinely viewport-fixed, independent of any ancestor's
+       stacking context. */
     (function relocateFixedOverlays() {
         var hdr = document.getElementById('mobile-header-wrapper');
         var nav = document.getElementById('mobile-bottom-nav');
@@ -3726,10 +3717,8 @@ ${ytd ? `
         const activeMainTab = activeSection ? activeSection.id : 'view-entry';
 
         if (activeMainTab === 'view-admin') {
-            // Scoped to #view-admin specifically — an unscoped '.sub-tab.active'
-            // lookup can match a leftover active sub-tab from a DIFFERENT
-            // section (e.g. Reports) still carrying the class, showing the
-            // wrong help content entirely.
+            // Scoped to #view-admin — Reports has its own sub-tabs with the same
+            // .sub-tab class, so an unscoped lookup could match the wrong one.
             const activeSub = document.querySelector('#view-admin .sub-tab.active');
             const subId = activeSub ? activeSub.id : 'sub-btn-leave';
             if      (subId === 'sub-btn-empl') return 'admin-empl';
