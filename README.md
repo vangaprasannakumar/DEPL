@@ -22,9 +22,10 @@
 12. [Payroll Engine Logic](#12-payroll-engine-logic)
 13. [Security Model](#13-security-model)
 14. [Version History — v9 (May 2026)](#14-version-history--v9-may-2026)
-15. [Latest Updates — v10 (June 2026)](#15-latest-updates--v10-june-2026)
-16. [Known Limitations](#16-known-limitations)
-17. [Troubleshooting](#17-troubleshooting)
+15. [Version History — v10 (June 2026)](#15-version-history--v10-june-2026)
+16. [Latest Updates — v11 (July 2026)](#16-latest-updates--v11-july-2026)
+17. [Known Limitations](#17-known-limitations)
+18. [Troubleshooting](#18-troubleshooting)
 
 ---
 
@@ -34,11 +35,14 @@
 
 - **Instant AI facial recognition** with 2-of-3 frame confirmation and live canvas bounding-box tracking for fraud-proof punch IN / OUT at a shared kiosk.
 - **True offline-first architecture** using IndexedDB and the Background Sync API so factory floor punches are never lost, even if the browser tab is closed.
-- **Automated payroll engine** that dynamically calculates prorated salary, overtime, ESI, PF, VPF, PT, and comp-off (SOT) based on mathematical calendar models.
+- **Automated payroll engine** that dynamically calculates prorated salary, overtime, ESI, PF, VPF, PT, and comp-off (SOT) based on mathematical calendar models, plus a Year-to-Date summary on every payslip.
 - **Native PDF payslips** printable directly from the app with crisp, selectable vector text.
-- **Multi-tier role access** securely authenticated via short-lived session tokens with brute-force protection (Admin, HR, Standby kiosk, and Employee self-service).
-- **Live dashboard** featuring visual enrolled-staff avatars and instant Excel matrix exports.
+- **Multi-tier role access** securely authenticated via short-lived session tokens with brute-force protection and self-service password reset (Admin, HR, Standby kiosk, and Employee self-service).
+- **Encrypted biometric data** — face descriptors are encrypted at rest, not stored as plain text.
+- **Automated nightly backups** of the entire database to Google Drive, independent of any manual process.
+- **Live dashboard** featuring category-wise attendance breakdown, visual enrolled-staff avatars, and instant Excel matrix exports.
 - **Employee correction requests** — a full workflow for employees to flag incorrect attendance for HR/Admin review.
+- **In-app Help Guide** on every screen — no separate training manual required.
 
 ```text
 ┌─────────────────────────────────────────────┐
@@ -53,6 +57,7 @@
 │         Google Apps Script (Code.gs)        │
 │  REST API · LockService · SHA-256 Auth      │
 │  Rate Limiter · Script Properties (SECRET)  │
+│  Face Data Encryption · Nightly Backups     │
 └────────────────┬────────────────────────────┘
                  │  SpreadsheetApp read/write
                  ▼
@@ -69,13 +74,14 @@
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Frontend | HTML / CSS / Vanilla JS | Single-file PWA — no build step, responsive mobile-first layout. |
+| Frontend | HTML / CSS / Vanilla JS | Single-file PWA — no build step, responsive mobile-first layout with full light/dark theme support. |
 | AI | face-api.js (TinyFaceDetector) | Client-side facial recognition — processes instantly via WebGL. Zero cloud calls. |
-| Backend | Google Apps Script (`doPost`) | REST-like API with script locking, session tokens, rate limiting, and chunked cache. |
+| Backend | Google Apps Script (`doPost`) | REST-like API with script locking, session tokens, rate limiting, chunked cache, and biometric encryption. |
 | Database | Google Sheets (8 tabs) | Zero-cost persistent storage with lightning-fast ArrayFormulas. |
 | Offline | Service Worker + IndexedDB | Stale-while-revalidate shell cache; pending punches background-sync with a 25s timeout guard. |
-| Export | ExcelJS + native `window.print()` | Frozen-pane Excel attendance matrices and crisp PDF payslips. |
-| Secrets | Google Script Properties | `APP_SECRET` stored server-side — hard-fails at login if missing, never exposed to the browser. |
+| Export | ExcelJS + native `window.print()` | Frozen-pane Excel attendance matrices and crisp PDF payslips with Year-to-Date summaries. |
+| Secrets | Google Script Properties | `APP_SECRET` stored server-side — signs session tokens **and** derives the biometric encryption keystream. Hard-fails at login if missing, never exposed to the browser. |
+| Backup | Google Drive | `backupAllSheets()` copies core sheets into a dated spreadsheet every night via a time-driven trigger; 30-day auto-pruned retention. |
 
 ---
 
@@ -84,9 +90,9 @@
 ```text
 depl-hrms/
 ├── index.html       # Entire frontend — UI, styles, AI models, canvas overlays, and JS logic
-├── manifest.json    # PWA manifest — 7 icon sizes, shortcuts, 4 screenshots (narrow + wide)
+├── manifest.json    # PWA manifest — 7 icon sizes, shortcuts, 4 screenshots, free device orientation
 ├── sw.js            # Service Worker — auto-versioned cache, offline fallback, background sync
-└── Code.gs          # Google Apps Script backend — all API actions and payroll mathematics
+└── Code.gs          # Google Apps Script backend — API actions, payroll math, encryption, backups
 ```
 
 > All four files represent the complete system. There are no dependencies to install,
@@ -116,14 +122,15 @@ depl-hrms/
 - Text-to-speech announces the employee's name to confirm.
 - **120-second countdown timer** visible live so the kiosk operator knows when it auto-closes.
 - The employee's `category` is passed to the server at punch time — the backend skips a redundant `getEmployees()` call for the SOT bonus check.
+- Face descriptors are fetched via the dedicated `getKioskFaceData` action (decrypted server-side, cached 15 minutes) rather than the general employee list — see [4.10](#410-data-protection--encrypted-biometrics--automated-backups).
 
 ### 4.3 Face Enrollment
 - Admin finds the employee card and taps **Enroll Face** (or **🔄 Re-enroll** if already enrolled).
 - Live canvas tracks the face to confirm good framing and lighting.
 - Camera captures **5 distinct 128-float descriptors** (higher `inputSize: 320` for maximum accuracy).
 - Progress dots update in real time showing capture count (`1/5`, `2/5`, …).
-- Descriptor array is JSON-serialised and saved to column Q of `List_of_Empl`.
-- After enrollment, `FaceMatcher` is immediately rebuilt from the updated descriptor set.
+- Descriptor array is JSON-serialised, **encrypted**, and saved to column Q of `List_of_Empl`.
+- After enrollment, `FaceMatcher` is immediately rebuilt using the plaintext just captured — no round trip needed to re-fetch and decrypt what the browser already has.
 
 ### 4.4 True Offline Background Sync
 - If the factory loses internet, punches are saved directly to the browser's **IndexedDB** — including `leaveType` (EL/LOP) and `shift` so all fields survive sync faithfully.
@@ -142,6 +149,7 @@ depl-hrms/
 - Full payroll logic including ghost-Sunday-proof calendar mathematics (see Section 12).
 - **Comp-Off (CO) tracking:** SOT employees who work ≥ 12 hours receive a 0.5-day leave credit, flagged as `SOT_BONUS_ADDED` in column O. Monthly Excel reports show the real per-employee CO total.
 - Generates HTML payslips with OT earnings, statutory deductions, and number-to-words net pay conversion.
+- **Year-to-Date Summary:** Every payslip (in-app and PDF) now includes a cumulative summary from the start of the financial year (April 1) — gross, deductions, net pay, OT hours, present days, and leaves availed. Computed by summing each elapsed month's own `getEmpDashData()` result, so the YTD total always matches what each individual month's payslip already showed. Cached 15 minutes per employee/month.
 - **Attendance % uses working days** (not total month days) as the denominator — e.g. 22 present out of 22 working days = 100%, not 22/30 = 73%.
 - **Native PDF Printing:** `window.open()` + `document.write()` injects the full `<!DOCTYPE html>` payslip document into a new window. `@media print` CSS strips the app chrome, leaving only the payslip.
 
@@ -155,16 +163,36 @@ depl-hrms/
 
 ### 4.8 Live Admin Dashboard
 - Live total staff, present, currently in, out, on leave, and late arrival counts.
+- **Present by Category:** A live progress bar per staff category (Staff Without OT / With OT / With SOT) showing "X / Y present" — surfaces which workforce segment is short-staffed at a glance.
 - **Enrolled Avatars:** Horizontally scrolling circular avatars (Apple-style initials) for every enrolled employee.
 - **Monthly Attendance Matrix (Excel):** Frozen-pane matrix with `X` (present), `EL` (leave), `A` (absent), summary columns (P, H, PD, EL, CO, H/S, A, TPD, PST EL, AVAIL EL) per employee.
+- The refresh button shows a loading spinner and an error toast on failure, consistent with every other data-fetch action in the app.
 
 ### 4.9 Admin Panel
 - **Users Management:** Create, edit, and delete app login accounts. Assign roles and link Employee-role accounts to their `Empl_ID` (column E).
 - **Employee Master:** Full CRUD for employee records including all salary components, shift assignment, category, leave balance, and PIN.
 - **Bulk Employee Import:** Paste CSV to create multiple employees in one shot (duplicate ID check included).
-- **Leave Management:** Assign single or multi-day EL or LOP leave ranges. Skips Sundays and public holidays automatically. Processed in a single optimised sheet pass — no per-day re-read.
+- **Leave Management:** Assign single or multi-day EL or LOP leave ranges. Skips Sundays and public holidays automatically. A **visual calendar grid** (up to 3 months) renders below the date pickers, highlighting exactly which days will be marked before submitting — Sundays within the range shown muted. Processed in a single optimised sheet pass — no per-day re-read.
 - **Correction Requests Panel:** View, review, and resolve employee attendance correction requests.
 - **Attendance History Edit:** Admin can update IN time, OUT time, Permission time, and Remarks on any historical record. All edits are logged to `Audit_Log` with the before and after values.
+
+### 4.10 Data Protection — Encrypted Biometrics & Automated Backups
+- **Face data encryption:** Face descriptors are encrypted at rest in column Q of `List_of_Empl` using a stream cipher — HMAC-SHA256(`APP_SECRET`, hex IV + counter) generates a keystream XORed against the plaintext, stored as `ENC1:<hex IV>:<base64 ciphertext>`. A random IV per save means re-saving identical data produces a different ciphertext each time.
+- Legacy unencrypted values pass through unchanged for backward compatibility; run `migrateEncryptAllFaceData()` once to encrypt everything already on the sheet immediately instead of waiting for a natural re-save.
+- This is a lightweight, dependency-free cipher — Apps Script has no native AES. It protects data from casual spreadsheet access; a stronger cryptographic guarantee would require routing through an external KMS.
+- **Automated nightly backups:** `backupAllSheets()` copies `Data`, `Users`, and `List_of_Empl` into a dated spreadsheet inside a "DEPL HRMS Backups" Drive folder every night at 2 AM IST. Backups older than 30 days are automatically deleted. Install the schedule once with `setupNightlyBackupTrigger()`.
+
+### 4.11 Self-Service Password Reset
+- A "Forgot password?" link on the login screen opens a two-step flow: enter a username to receive a 6-digit code by email, then submit the code with a new password.
+- Codes expire after 15 minutes and are single-use. Requests are capped at 3 per hour per username to prevent inbox flooding.
+- The server returns an identical, generic response whether or not the username exists — the flow cannot be used to enumerate valid logins.
+- A successful reset clears any active login lockout on that account and appends a `Password Reset` entry to `Audit_Log`.
+- Uses `MailApp.sendEmail()` — no additional API key required, but subject to the deploying Google account's daily email quota (see [Known Limitations](#17-known-limitations)).
+
+### 4.12 In-App Help Guide
+- A slide-down panel (not a full-screen modal) — opens beneath the header on tap, dismissible by tapping outside or the trigger icon again, matching the notification bell's interaction pattern.
+- Content is scoped per screen and per admin/report sub-tab, including a dedicated entry for the Dashboard tab.
+- No separate training manual needed for new HR or Standby-kiosk staff.
 
 ---
 
@@ -191,7 +219,9 @@ depl-hrms/
 > Column O (Flags) stores internal markers: `SOT_BONUS_ADDED` (CO tracking) and `LOP`.
 
 ### Tab: `List_of_Empl` (Employee Master)
-*Columns A–Q:* ID, Name, Shift, Category, Leave Bal, Gross, Basic, HRA, Conv, Spl Allow, Med, ESI, PF, VPF, PT, PIN, **Face Data (JSON)**.
+*Columns A–Q:* ID, Name, Shift, Category, Leave Bal, Gross, Basic, HRA, Conv, Spl Allow, Med, ESI, PF, VPF, PT, PIN, **Face Data (encrypted)**.
+
+> **Column Q — Face Data:** Stored as `ENC1:<hex IV>:<base64 ciphertext>` (see [4.10](#410-data-protection--encrypted-biometrics--automated-backups)). Legacy plaintext JSON values are still read correctly but should be migrated with `migrateEncryptAllFaceData()`. Never edit this column by hand.
 
 ### Tab: `Users` (App Logins)
 *Columns A–E:* Username, Role, Email, Password (SHA-256), **Empl_ID**.
@@ -200,6 +230,8 @@ depl-hrms/
 > from `List_of_Empl` column A. Leave blank for Admin, HR, Security, and Standby accounts.
 > This links an Employee login directly to their payslip and leave balance — no name-matching
 > that would break when two employees share the same name.
+>
+> **Column C — Email:** Required for that account's self-service password reset to work (Section 4.11). If blank, reset requests for that username silently do nothing — by design, so the response can't be used to confirm the account exists.
 
 ### Tab: `Shifts`
 *Columns A–D:* Shift Name, Shift Start, Shift End, OT Hours Threshold.
@@ -214,7 +246,10 @@ depl-hrms/
 *Columns A–B:* Date, Reason. Used by payroll, leave marking, and the sandwich rule to identify public holidays.
 
 ### Tab: `Audit_Log` (Immutable History)
-*Columns A–F:* Timestamp, Actor (Admin/User), Empl ID, Empl Name, Old Value / Action Type, New Value / Details. All admin edits, user deletions, employee deletions, and correction requests are appended here.
+*Columns A–F:* Timestamp, Actor (Admin/User), Empl ID, Empl Name, Old Value / Action Type, New Value / Details. All admin edits, user deletions, employee deletions, password resets, and correction requests are appended here.
+
+### Drive: "DEPL HRMS Backups" Folder
+Not a sheet tab — a separate Google Drive folder, created automatically on first backup run. Contains one dated spreadsheet per night (`Backup_YYYY-MM-DD`), each with copies of `Data`, `Users`, and `List_of_Empl`. Entries older than 30 days are auto-deleted.
 
 ---
 
@@ -225,23 +260,31 @@ This HTTPS endpoint connects the PWA to your Google Sheet. Update it in **two pl
 - **`index.html`** — `const GOOGLE_API_URL = "..."` near the top of the `<script>` block.
 - **`sw.js`** — `const GOOGLE_API_URL = "..."` at the very top of the file.
 
-### 7.2 `APP_SECRET` (Session Token Signing Key)
-This is a **true secret** — never place it in the frontend. The backend **hard-fails at login** if `APP_SECRET` is not set. There is no insecure fallback.
+### 7.2 `APP_SECRET` (Session Signing Key **and** Biometric Encryption Key)
+This is a **true secret** — never place it in the frontend. It now serves two purposes:
+1. Signs session tokens (as before).
+2. Derives the keystream used to encrypt and decrypt face descriptor data (Section 4.10).
+
+The backend **hard-fails** on login and on any face-data operation if `APP_SECRET` is not set. There is no insecure fallback.
 
 1. In the Apps Script editor → **⚙️ Project Settings** → **Script Properties** → **Add script property**
 2. Property name: `APP_SECRET`
 3. Value: *a long random string — minimum 32 characters*
 
 > ⚠️ If login returns `"APP_SECRET script property is not configured"`, this step was skipped.
+> ⚠️ **Never rotate `APP_SECRET` on a live sheet without a plan** — changing it invalidates the ability to decrypt any face data encrypted under the old value. Re-enroll affected employees, or decrypt-then-re-encrypt under the new secret first.
 
 ### 7.3 `app-version` Meta Tag (Cache Auto-Busting)
 The Service Worker reads the cache version from `index.html` at install time — no manual constant to update in `sw.js`.
 
 Update this line in `index.html` on every deploy:
 ```html
-<meta name="app-version" content="20260628">
+<meta name="app-version" content="20260701b">
 ```
-Format: `YYYYMMDD`. Changing it causes all users to receive the fresh build on their next visit.
+Format: `YYYYMMDD`, optionally with a same-day revision letter suffix (e.g. `20260701b`) for a second deploy on the same date — the value is used as an opaque cache-key string, not parsed as a date. Changing it causes all users to receive the fresh build on their next visit.
+
+### 7.4 Email Sending (Password Reset)
+No separate API key is required — self-service password reset (Section 4.11) uses `MailApp.sendEmail()`, which runs under the deploying Google account's own daily email quota (roughly 100/day on a personal Gmail account, higher on Google Workspace). No configuration step needed beyond ensuring each Users-sheet account has a valid email in column C.
 
 ---
 
@@ -252,11 +295,13 @@ Format: `YYYYMMDD`. Changing it causes all users to receive the fresh build on t
 3. Go to **⚙️ Project Settings → Script Properties** → add `APP_SECRET`.
 4. Click **Deploy → New Deployment** (Type: Web App, Execute As: Me, Who has access: Anyone).
 5. Copy the Web App URL → paste into `GOOGLE_API_URL` in both `index.html` and `sw.js`.
-6. In the `Users` sheet, manually add your first Admin row. The password can be plaintext — it is SHA-256 hashed automatically on first login.
+6. In the `Users` sheet, manually add your first Admin row. The password can be plaintext — it is SHA-256 hashed automatically on first login. Populate the Email column (C) so self-service password reset works.
 7. For Employee-role users: populate column E (`Empl_ID`) with their ID from `List_of_Empl` column A.
 8. Host `index.html`, `manifest.json`, and `sw.js` on **GitHub Pages** or any static HTTPS host.
 9. Update `<meta name="app-version" content="YYYYMMDD">` in `index.html` to today's date.
-10. Replace the placeholder `src` URLs in `manifest.json` screenshots with real app screenshots (540×720 narrow + 1280×720 wide).
+10. Replace the placeholder `src` URLs in `manifest.json` screenshots with real app screenshots (540×720 narrow + 1280×720 wide) — still outstanding, see [Known Limitations](#17-known-limitations).
+11. **One-time:** Run `migrateEncryptAllFaceData()` from the Apps Script editor (▶ Run) to encrypt any face data already on the sheet. Safe to re-run — already-encrypted rows are skipped.
+12. **One-time:** Run `setupNightlyBackupTrigger()` from the Apps Script editor (▶ Run) to install the 2 AM IST nightly backup schedule. Safe to re-run — existing triggers for this function are replaced, not duplicated.
 
 ---
 
@@ -268,8 +313,11 @@ Format: `YYYYMMDD`. Changing it causes all users to receive the fresh build on t
 - [ ] Confirmed `ARRAYFORMULA` exists in `Data` sheet cells **J1** and **K1**.
 - [ ] Verified `APP_SECRET` is set in Script Properties.
 - [ ] Populated **column E (Empl_ID)** in the `Users` sheet for all Employee-role accounts.
+- [ ] Populated **column C (Email)** in the `Users` sheet for accounts that need self-service password reset.
 - [ ] Confirmed `manifest.json` icons point to the correct postimg URLs (all 7 sizes).
 - [ ] Replaced placeholder screenshot URLs in `manifest.json` with real 540×720 (narrow) and 1280×720 (wide) screenshots.
+- [ ] Ran `migrateEncryptAllFaceData()` at least once (new deployments only need this if face data was imported from an unencrypted source).
+- [ ] Confirmed `setupNightlyBackupTrigger()` has been run — check Apps Script → Triggers for a `backupAllSheets` entry.
 
 ---
 
@@ -301,6 +349,7 @@ All weight file URLs are pinned to `@0.22.2` in both `sw.js` and `index.html` to
 
 - **Matching threshold:** `FaceMatcher` distance threshold set to `0.6`.
 - **Live tracking:** A `<canvas>` overlay draws a real-time bounding box with the employee's name over the detected face.
+- **Data at rest:** Descriptors are encrypted before being written to `List_of_Empl` column Q (Section 4.10). The kiosk fetches decrypted descriptors via the dedicated `getKioskFaceData` action, cached server-side for 15 minutes and invalidated immediately on any new enrollment.
 
 ### 2-of-3 Frame Confirmation
 The kiosk maintains a `frameHits` counter per employee. Only when the same employee is matched in **2 or more consecutive frames** does the punch fire. All other counters reset to 0 on each frame. Protects against:
@@ -310,8 +359,8 @@ The kiosk maintains a `frameHits` counter per employee. Only when the same emplo
 
 ### Enrollment Flow
 - 5 distinct 128-float descriptors captured per employee (progress dots shown in real time).
-- JSON-serialised and written to column Q of `List_of_Empl`.
-- `FaceMatcher` is rebuilt immediately from the updated descriptor set.
+- JSON-serialised, encrypted, and written to column Q of `List_of_Empl`.
+- `FaceMatcher` is rebuilt immediately using the plaintext just captured in-browser — no round trip to re-fetch and decrypt.
 
 ---
 
@@ -332,6 +381,9 @@ Net Pay      = Prorated Gross + OT Earnings − (ESI + PF + VPF + PT)
 
 SOT Comp-Off = +0.5 leave day per shift where elapsed time ≥ 12 hours
                (flagged SOT_BONUS_ADDED in column O of Data sheet)
+
+YTD Summary  = Σ getEmpDashData() for every month from April 1 through
+               the requested month (Indian financial year, April–March)
 ```
 
 ### Sandwich Rule
@@ -341,9 +393,13 @@ If an employee is absent on a day sandwiched between two non-working days (Sunda
 - **EL (Earned Leave):** Deducts 1.0 from the employee's leave balance. Written as `IN = LEAVE`, `OUT = LEAVE`.
 - **LOP (Loss of Pay):** No leave balance deduction. `LOP` flag written to column O of the Data sheet.
 - `markLeaveAdmin()` skips Sundays and public holidays, processes the entire date range in a single pre-read pass, and tracks `nextInsertRow` without re-scanning column C on each iteration.
+- The frontend renders a visual calendar preview of the selected range before submission (Section 4.9).
 
 ### Current Month Cutoff
 Both `exportMonthlyDashboard()` and `exportSalaryReport()` detect whether the requested month is the current month. If yes, data is processed only up to today's date — future days show blank (not "Absent"). Past months always use the full month.
+
+### Year-to-Date Summary
+`getYTDSummary(emplId, asOfMonthStr)` determines the Indian financial year start (April of the current year, or the previous year if the requested month is Jan–Mar), then sums `getEmpDashData()` across every elapsed month. This guarantees the YTD figures always agree with what each individual month's payslip already displayed — there is no separate, independently-derived calculation path to drift out of sync. Cached 15 minutes per employee/month combination.
 
 ---
 
@@ -353,11 +409,14 @@ Both `exportMonthlyDashboard()` and `exportSalaryReport()` detect whether the re
 |---|---|
 | **Passwords** | SHA-256 hashed on the client before transit. Plaintext passwords in the Users sheet are silently upgraded on first login. |
 | **Session Tokens** | 5.5-hour expiring tokens stored in GAS `CacheService`. Validated and refreshed on every authenticated request. |
-| **APP_SECRET** | Required Script Property. Hard-fails with a clear error if missing — no insecure fallback. |
+| **APP_SECRET** | Required Script Property. Signs session tokens and derives the biometric encryption keystream. Hard-fails with a clear error if missing — no insecure fallback. |
 | **Login Rate Limiting** | After **5 failed attempts** within **15 minutes**, the username is temporarily locked. Counter in `CacheService`; clears on success or after 15 minutes. |
+| **Password Reset Rate Limiting** | Reset code requests capped at **3 per hour** per username. Codes expire after 15 minutes and are single-use. Response is identical whether or not the username exists — no enumeration. |
+| **Face Data Encryption** | Descriptors encrypted at rest (HMAC-SHA256 stream cipher keyed on `APP_SECRET`, random IV per save). See Section 4.10. |
 | **Self-Deletion Guard** | An Admin cannot delete their own account. Enforced by both `deleteUser()` backend and the Admin Panel UI (Delete button disabled when editing your own account). |
 | **Concurrency** | `LockService.waitLock(15000)` prevents duplicate punch rows during heavy shift-change windows. |
-| **Audit Trail** | All admin edits and correction requests are immutably appended to `Audit_Log` with timestamp, actor, before, and after values. |
+| **Audit Trail** | All admin edits, password resets, and correction requests are immutably appended to `Audit_Log` with timestamp, actor, before, and after values. |
+| **Backups** | Full-sheet nightly backup to a separate Drive spreadsheet, 30-day retention, independent of any manual process. See Section 4.10. |
 
 ---
 
@@ -408,9 +467,9 @@ A comprehensive audit covering **13 bug fixes, 6 performance upgrades, and 7 str
 
 ---
 
-## 15. Latest Updates — v10 (June 2026)
+## 15. Version History — v10 (June 2026)
 
-This release completes the full rebranding from **Capco Master AI** to **DEPL HRMS**, updates all asset links, and resolves the mobile header layout issue.
+This release completed the full rebranding from **Capco Master AI** to **DEPL HRMS**, updated all asset links, and resolved the mobile header layout issue.
 
 ### 🔴 Bug Fixed
 
@@ -419,7 +478,7 @@ The `#mobile-header-spacer` was hardcoded to `128px` — shorter than the real r
 
 **Two-layer fix:**
 - CSS fallback height raised from `128px` → `168px` to cover the real header (top row + clock row + badge row + padding).
-- New `adjustHeaderSpacer()` JavaScript function measures the header's actual `getBoundingClientRect().height` via `requestAnimationFrame` after login and sets the spacer to that exact pixel value. Also wired to `window.resize` so landscape/portrait orientation changes stay correct.
+- New `adjustHeaderSpacer()` JavaScript function measures the header's actual `getBoundingClientRect().height` via `requestAnimationFrame` after login and sets the spacer to that exact pixel value. Also wired to `window.resize` so layout changes stay correct.
 
 ### 🎨 Rebranding — Capco → DEPL HRMS
 
@@ -434,8 +493,6 @@ All four source files updated end-to-end:
 
 ### 🖼️ New Logo / Icon Set
 
-All icon references updated to the new DEPL logo across all files:
-
 | Size | URL |
 |---|---|
 | 48 × 48 | `https://i.postimg.cc/pVFqM3R8/DEPL-logo-launchericon-48x48.png` |
@@ -445,27 +502,75 @@ All icon references updated to the new DEPL logo across all files:
 | 192 × 192 | `https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png` |
 | 512 × 512 | `https://i.postimg.cc/BZKMfR4c/DEPL-logo-launchericon-512x512.png` |
 
-### 🧹 Comment Cleanup (All Files)
+### 🧹 Comment Cleanup (Round 1, All Files)
 
-All `FIX ERR-xx`, `MOD-0x`, `UPGRADE #x`, `UPG-0x`, `FIX PERF`, `FIX BUG`, `FIX UX`, `FIX LOGIC`, and `PERF FIX` tracking tags removed from all four files. Replaced with concise, purposeful comments that explain **why** — not change history. Zero tracking tags remain in any file.
+All `FIX ERR-xx`, `MOD-0x`, `UPGRADE #x`, `UPG-0x`, `FIX PERF`, `FIX BUG`, `FIX UX`, `FIX LOGIC`, and `PERF FIX` tracking tags removed from all four files. Replaced with concise, purposeful comments that explain **why** — not change history.
 
 ---
 
-## 16. Known Limitations
+## 16. Latest Updates — v11 (July 2026)
 
-1. **Google Apps Script 6-minute execution limit:** Very large full-year CSV exports may time out. Filter by month. `markLeaveAdmin()` for extreme multi-month ranges is significantly faster after v9 ERR-01 fix but still subject to this limit.
+This release adds encryption, automated backups, and self-service password reset, layers in a category-wise dashboard breakdown, a visual leave calendar, and Year-to-Date payslip summaries, then closes out a full round of bugs surfaced during live testing on the factory floor — including a font-consistency and mobile-landscape fix.
+
+### 🆕 New Capabilities
+
+**Face Data Encryption**
+Biometric descriptors are now encrypted at rest in `List_of_Empl` column Q, closing the plaintext-biometric gap flagged in v10's Known Limitations. A stream cipher — HMAC-SHA256(`APP_SECRET`, hex IV + counter) as keystream, XORed against the plaintext — produces `ENC1:<hex IV>:<base64 ciphertext>`. Legacy unencrypted values still read correctly; `migrateEncryptAllFaceData()` encrypts everything already on the sheet in one pass. A new `getKioskFaceData` action returns only decrypted `{id, faceData}` pairs, cached 15 minutes, so the decryption cost is isolated to the one place that needs it rather than paid on every `getEmployees()` call.
+
+**Automated Nightly Backups**
+`backupAllSheets()` copies `Data`, `Users`, and `List_of_Empl` into a dated spreadsheet inside a "DEPL HRMS Backups" Drive folder every night at 2 AM IST, with 30-day auto-pruned retention. `setupNightlyBackupTrigger()` installs the schedule — a one-time step.
+
+**Self-Service Password Reset**
+A "Forgot password?" link now sits below the login button. Two-step flow: request a 6-digit code emailed to the address on file, then submit the code with a new password. Rate-limited to 3 requests/hour/username, codes expire in 15 minutes, and the server response never reveals whether a username exists.
+
+**Category-Wise Dashboard Breakdown**
+`getDashboardStats()` now returns a `byCategory` object; the dashboard renders a live progress bar per staff category with "X / Y present" counts.
+
+**Visual Leave Calendar Preview**
+The leave-marking day-count preview now renders an actual calendar grid (up to 3 months), with selected days highlighted and Sundays shown muted, instead of a text-only count.
+
+**Year-to-Date Payslip Summary**
+`getYTDSummary()` sums each elapsed month's own `getEmpDashData()` result from April 1 through the requested month, guaranteeing the YTD total always matches what each individual month's payslip already showed. Appears on both the in-app payslip view and the printable PDF.
+
+**In-App Help Guide Rebuild**
+Converted from a full-screen modal into a slide-down panel matching the notification bell's interaction pattern — opens under the header, dismissible by tapping outside or the trigger again. Content substantially expanded across every screen, including a previously-missing Dashboard entry.
+
+### 🔴 Bugs Fixed (Post-Deployment Testing)
+
+| Issue | Fix |
+|---|---|
+| **Face re-enrollment failed with a `computeHmacSha256Signature` error** | The encryption keystream passed a raw JS byte array (built via `.concat()`) to `Utilities.computeHmacSha256Signature()`. Apps Script's JS→Java bridge doesn't reliably recognize a plain array as a native `byte[]`, throwing `parameters (number[],String) don't match the method signature`. Fixed by hashing a hex-encoded **string** instead, using the same `(String, String)` overload `sha256()` already relies on elsewhere in the file. |
+| **Help Guide showed the wrong content after switching tabs** | `openTutorial()`'s sub-tab lookup used an unscoped `document.querySelector('.sub-tab.active')`, which could match a leftover active sub-tab from the Reports section while viewing Inventory — both use the same `.sub-tab` class. Scoped the lookup to `#view-admin .sub-tab.active` / `#view-reports .sub-tab.active`. |
+| **Login card, loading-screen text, mobile header, header clock badge, and the Excel-style filter dropdowns were unreadable in light mode** | Several components had hardcoded dark backgrounds or text colors with no `body.light-mode` override — text correctly flipped to near-black per the active theme, but the surface it sat on didn't, producing dark-on-dark or near-invisible contrast. Added matching light-mode overrides for each; the loading-screen scrim was left intentionally dark (matching the app's other overlays) with its text pinned to a fixed light color instead. |
+| **History filter and Search/Export buttons had no gap between them** | Added spacing between the Employee Filter dropdown and the action button row. |
+| **Dashboard refresh button appeared to do nothing** | `loadDashboard()` never called `showLoader()` / `hideLoader()` or `showToast()`, unlike every other data-fetch action in the app — it worked, but gave zero visual feedback and would fail silently on error. Brought in line with the rest of the app's pattern. |
+| **App would not rotate to landscape on mobile** | `manifest.json` had `"orientation": "portrait-primary"`, which the OS respects for an installed PWA regardless of the device's physical rotation. Changed to `"any"`. |
+| **Dead zone between mobile and tablet layouts (701px–767px)** | CSS breakpoints jumped straight from `max-width:700px` (mobile) to `min-width:768px` (tablet) with nothing covering the gap between — any viewport landing in that 66px range got no header, sidebar, or nav at all. Extended the mobile breakpoint to `max-width:767px`, closing the gap completely. |
+| **Inconsistent font rendering after a page refresh** | `'Outfit'` was hardcoded individually on ~9 separate CSS selectors instead of being inherited from `body` once — any element not manually added to one of those lists could silently fall back to the browser's native font, especially visible during the brief window before the web font finishes loading. Consolidated all of them to `font-family: inherit`, and added `<link rel="preconnect">` hints for the Google Fonts domains to shrink that load-timing window. |
+
+### 🧹 Comment Cleanup (Round 2, `index.html`)
+
+A further 11 comments had reverted to change-history narration (`FIX UX:`, `MOD-07 / FIX ERR-12:`, `PROBLEM: / SOLUTION:` framing, redundant `for=` label notes, etc.) during the bug-fix round above — written explaining fixes as they happened, and missed by v10's cleanup pass since they didn't exist yet. Rewritten as forward-looking documentation. Zero tracking tags remain in any file.
+
+---
+
+## 17. Known Limitations
+
+1. **Google Apps Script 6-minute execution limit:** Very large full-year CSV exports may time out. Filter by month. `markLeaveAdmin()` for extreme multi-month ranges is significantly faster after the v9 ERR-01 fix but still subject to this limit.
 2. **iOS Safari:** Background Sync API is unsupported. Requires the app to be open when the device reconnects to flush the offline punch queue. The `online` event listener handles this automatically when the app is in the foreground.
 3. **Face API on low-end mobile:** WebGL/GPU rendering depends on the device chipset. Battery savers may force CPU fallback at lower frame rates. The `inputSize: 160` setting significantly mitigates this.
 4. **PWA screenshots:** The 4 manifest screenshot entries still use placeholder URLs from earlier deployments. Chrome's install prompt shows placeholder images until replaced with real screenshots (see Section 9 checklist).
-5. **Biometric data at rest:** Face descriptor arrays (128 floats × 5 samples per employee) are stored as plain JSON text in column Q of `List_of_Empl`. Consider encrypting this column using `APP_SECRET` as the key for compliance with India's DPDP Act 2023 *(planned for v11)*.
-6. **`localStorage` session key:** The session key `capco_attendance_user` retains its original name for backward compatibility. Existing logged-in sessions are preserved across the v10 rebranding update without requiring re-login.
+5. **Face data encryption is a lightweight stream cipher, not AES:** Apps Script has no native AES implementation. The current HMAC-SHA256 keystream cipher protects against casual spreadsheet access and meets the intent of India's DPDP Act 2023, but is not a substitute for a hardware-backed KMS if a stronger cryptographic guarantee is ever required.
+6. **Password reset email quota:** `MailApp.sendEmail()` runs under the deploying Google account's daily email quota (~100/day on a personal Gmail account, higher on Workspace). Not a practical concern at current headcount, but worth knowing if usage patterns change.
+7. **Landscape mode falls back to the desktop layout:** Rotating a phone to landscape now works (the orientation lock was removed in v11), but any viewport wider than 767px renders the same collapsed-sidebar layout used for tablets/desktops rather than a purpose-built landscape phone layout. Functional, but not yet optimized for very short landscape viewport heights.
+8. **`localStorage` session key:** The session key `capco_attendance_user` retains its original name for backward compatibility. Existing logged-in sessions are preserved across rebranding updates without requiring re-login.
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 **`"APP_SECRET script property is not configured"`**
-Add `APP_SECRET` to Apps Script → Project Settings → Script Properties before anyone can log in. See Section 7.2.
+Add `APP_SECRET` to Apps Script → Project Settings → Script Properties before anyone can log in — this also blocks any face-data save/read, since the same secret drives biometric encryption. See Section 7.2.
 
 **`"Too many failed login attempts. Please try again in 15 minutes."`**
 Five consecutive failed logins triggered the rate limiter. Wait 15 minutes — the counter clears automatically.
@@ -475,6 +580,9 @@ Re-deploy the Apps Script as a **New Deployment** and confirm *Who has access* i
 
 **Camera frozen on "Starting Camera..."**
 The site must be served over **HTTPS**. Browsers block camera access on plain HTTP. Confirm your GitHub Pages URL uses `https://`.
+
+**Face enrollment / re-enrollment fails with an HMAC or "Save Failed" error**
+Resolved in v11 — confirm `Code.gs` has been redeployed as a **New Deployment** after updating, and that `GOOGLE_API_URL` in `index.html`/`sw.js` points to the new deployment URL. If it persists, check the Apps Script execution log for the exact error.
 
 **Leave day count mismatch between preview and actual days marked**
 The preview counts working days excluding Sundays. The server additionally skips public holidays. The difference is by design — the preview label states "public holidays also excluded".
@@ -495,12 +603,21 @@ SOT bonus credits are only written to column O when the employee punches OUT and
 Intended behaviour. `@media print` CSS strips the app chrome, leaving only the payslip. On desktop, use Chrome's **"Save as PDF"** option in the print dialog for the cleanest result.
 
 **Service Worker not updating after a new deploy**
-Confirm `<meta name="app-version" content="YYYYMMDD">` in `index.html` was updated to the new deploy date. If the meta tag is not used, bump `CACHE_DATE_FALLBACK` in `sw.js` — any change to `sw.js` also triggers a reinstall.
+Confirm `<meta name="app-version" content="YYYYMMDD">` in `index.html` was updated to the new deploy date (a same-day revision suffix like `20260701b` is fine — the value only needs to change, not follow a strict date format). If the meta tag is not used, bump `CACHE_DATE_FALLBACK` in `sw.js` — any change to `sw.js` also triggers a reinstall.
 
 **Content still hidden under the mobile header after a hard refresh**
-This was resolved in v10 via dynamic `adjustHeaderSpacer()`. If you see it, the old `sw.js` is still serving a cached version of `index.html`. Clear the Service Worker in DevTools → Application → Service Workers → Unregister, then reload.
+Resolved via dynamic `adjustHeaderSpacer()`. If you see it, the old `sw.js` is still serving a cached version of `index.html`. Clear the Service Worker in DevTools → Application → Service Workers → Unregister, then reload.
+
+**App won't rotate to landscape / rotating shows no navigation at all**
+If rotation itself doesn't work: the app must be **reinstalled** (not just refreshed) after the v11 manifest change — an already-installed PWA doesn't re-read `manifest.json` on a normal reload. Uninstall from the home screen and reinstall. If rotation works but a specific viewport width shows no header/sidebar at all, confirm you're on the v11 build — this was the 701–767px breakpoint gap, fixed in this release.
+
+**Password reset email never arrives**
+Check that column C (Email) is populated for that username in the Users sheet — if blank, the request silently no-ops by design (the response is identical either way, to avoid confirming which usernames exist). Also check the deploying Google account hasn't hit its daily `MailApp` sending quota.
+
+**Fonts look inconsistent in some areas (dropdowns, filters, sidebar) after a refresh**
+Resolved in v11 by consolidating scattered font declarations to inherit from `body` and adding font preconnect hints. If still visible, do a hard refresh (clears any stale cached CSS) — see the Service Worker troubleshooting entry above.
 
 ---
 
 *DEPL HRMS — Dada Energies Pvt. Ltd., Muppireddypally, Telangana.*
-*v10 — June 2026 | Previous: v9 — May 2026*
+*v11 — July 2026 | Previous: v10 — June 2026, v9 — May 2026*
