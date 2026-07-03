@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#09090b">
     <!-- sw.js reads this value at install time and uses it as the cache key,
          so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
-    <meta name="app-version" content="20260701b">
+    <meta name="V11" content="20260701b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
@@ -3916,7 +3916,15 @@ ${ytd ? `
 
     // ── EXPORT MONTHLY SALARY REPORT ─────────────────────────────────────────
     // Column styles set once; row values written in bulk — avoids per-cell style
-    // objects (26 cols × 35 employees = 910+) that caused a ~15 min browser hang.
+    // objects that caused a ~15 min browser hang in an earlier version.
+    //
+    // VPF and Sandwich Ded. are now real columns (I and M) feeding the proration
+    // and deduction formulas — previously both were entirely absent from this
+    // report, so it could show a higher payable-day count and net pay than the
+    // individual payslip for the same employee/month. ADV. is no longer treated
+    // as a deduction (it never should have been) — it's now a manual-entry
+    // column AFTER Net Pay that adds to it, with a FINAL PAYABLE column showing
+    // NET + ADV.
     async function downloadSalaryReport() {
         const m = document.getElementById('report-salary-month').value;
         if (!m) { showToast('Please select a month.', 'warn'); return; }
@@ -3954,33 +3962,38 @@ ${ytd ? `
 
             // ── Pre-define column metadata ─────────────────────────────────────
             const colDefs = [
-                {key:'A',w:8,  label:'EMP\nID',     group:'id'},
-                {key:'B',w:28, label:'NAME',         group:'id'},
-                {key:'C',w:11, label:'P.M\n(Gross)', group:'fixed', isCurr:true},
-                {key:'D',w:10, label:'BASIC',         group:'fixed', isCurr:true},
-                {key:'E',w:10, label:'HRA',            group:'fixed', isCurr:true},
-                {key:'F',w:10, label:'Conv.\nAllow',  group:'fixed', isCurr:true},
-                {key:'G',w:10, label:'Spl\nAllow',    group:'fixed', isCurr:true},
-                {key:'H',w:10, label:'Medical',        group:'fixed', isCurr:true},
-                {key:'I',w:8,  label:'P/Days',         group:'att'},
-                {key:'J',w:8,  label:'Ph/Days',        group:'att'},
-                {key:'K',w:8,  label:'Leaves\nAvld',  group:'att'},
-                {key:'L',w:8,  label:'Absent\nDays',  group:'att'},
-                {key:'M',w:8,  label:'Total\nDays',   group:'att'},
-                {key:'N',w:11, label:'BASIC',          group:'pro',  isCurr:true},
-                {key:'O',w:10, label:'HRA',             group:'pro',  isCurr:true},
-                {key:'P',w:10, label:'Conv.\nAllow',   group:'pro',  isCurr:true},
-                {key:'Q',w:10, label:'Spl\nAllow',     group:'pro',  isCurr:true},
-                {key:'R',w:10, label:'Medical',         group:'pro',  isCurr:true},
-                {key:'S',w:11, label:'GROSS',           group:'pro',  isCurr:true},
-                {key:'T',w:9,  label:'E.P.F',           group:'ded',  isCurr:true},
-                {key:'U',w:9,  label:'E.S.I',           group:'ded',  isCurr:true},
-                {key:'V',w:8,  label:'P.T',             group:'ded',  isCurr:true},
-                {key:'W',w:8,  label:'ADV.',            group:'ded',  isCurr:true},
-                {key:'X',w:10, label:'T.DED.',          group:'ded',  isCurr:true},
-                {key:'Y',w:12, label:'NET',             group:'net',  isCurr:true},
-                {key:'Z',w:14, label:'SIGN',            group:'sign'},
+                {key:'A', w:8,  label:'EMP\nID',        group:'id'},
+                {key:'B', w:28, label:'NAME',            group:'id'},
+                {key:'C', w:11, label:'P.M\n(Gross)',    group:'fixed', isCurr:true},
+                {key:'D', w:10, label:'BASIC',           group:'fixed', isCurr:true},
+                {key:'E', w:10, label:'HRA',             group:'fixed', isCurr:true},
+                {key:'F', w:10, label:'Conv.\nAllow',    group:'fixed', isCurr:true},
+                {key:'G', w:10, label:'Spl\nAllow',      group:'fixed', isCurr:true},
+                {key:'H', w:10, label:'Medical',         group:'fixed', isCurr:true},
+                {key:'I', w:9,  label:'V.P.F',           group:'fixed', isCurr:true},
+                {key:'J', w:8,  label:'P/Days',          group:'att'},
+                {key:'K', w:8,  label:'Ph/Days',         group:'att'},
+                {key:'L', w:8,  label:'Leaves\nAvld',    group:'att'},
+                {key:'M', w:9,  label:'Sandwich\nDed.',  group:'att'},
+                {key:'N', w:8,  label:'Absent\nDays',    group:'att'},
+                {key:'O', w:8,  label:'Total\nDays',     group:'att'},
+                {key:'P', w:11, label:'BASIC',           group:'pro',  isCurr:true},
+                {key:'Q', w:10, label:'HRA',             group:'pro',  isCurr:true},
+                {key:'R', w:10, label:'Conv.\nAllow',    group:'pro',  isCurr:true},
+                {key:'S', w:10, label:'Spl\nAllow',      group:'pro',  isCurr:true},
+                {key:'T', w:10, label:'Medical',         group:'pro',  isCurr:true},
+                {key:'U', w:11, label:'GROSS',           group:'pro',  isCurr:true},
+                {key:'V', w:9,  label:'E.P.F',           group:'ded',  isCurr:true},
+                {key:'W', w:9,  label:'E.S.I',           group:'ded',  isCurr:true},
+                {key:'X', w:8,  label:'P.T',             group:'ded',  isCurr:true},
+                {key:'Y', w:9,  label:'V.P.F',           group:'ded',  isCurr:true},
+                {key:'Z', w:10, label:'T.DED.',          group:'ded',  isCurr:true},
+                {key:'AA',w:12, label:'NET',             group:'net',  isCurr:true},
+                {key:'AB',w:10, label:'ADV.\n(ADD)',     group:'adv',  isCurr:true},
+                {key:'AC',w:13, label:'FINAL\nPAYABLE',  group:'final',isCurr:true},
+                {key:'AD',w:14, label:'SIGN',            group:'sign'},
             ];
+            const NUM_COLS = colDefs.length; // 30
 
             const groupColors = {
                 id:    { bg:'FFe2e8f0', font:'FF1e3a5f' },
@@ -3989,13 +4002,16 @@ ${ytd ? `
                 pro:   { bg:'FFe0f2fe', font:'FF0c4a6e' },
                 ded:   { bg:'FFffe4e6', font:'FF7f1d1d' },
                 net:   { bg:'FFbbf7d0', font:'FF065f46' },
+                adv:   { bg:'FFfef3c7', font:'FF78350f' },
+                final: { bg:'FF0f172a', font:'FFFFFFFF' },
                 sign:  { bg:'FFfefce8', font:'FF713f12' },
             };
 
             const groupNames = {
                 id:'EMPLOYEE', fixed:'FIXED SALARY STRUCTURE',
                 att:'ATTENDANCE', pro:'PRORATED EARNINGS (FORMULA)',
-                ded:'DEDUCTIONS (FORMULA)', net:'NET PAY', sign:''
+                ded:'DEDUCTIONS (FORMULA)', net:'NET PAY',
+                adv:'ADVANCE — ADDS TO NET', final:'FINAL PAYABLE', sign:''
             };
 
             // Set column widths
@@ -4003,7 +4019,7 @@ ${ytd ? `
 
             // ── Row 1: Main title ─────────────────────────────────────────────
             sheet.addRow([`DEPL  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
-            sheet.mergeCells(1,1,1,26);
+            sheet.mergeCells(1,1,1,NUM_COLS);
             Object.assign(sheet.getRow(1).getCell(1), {
                 style:{ font:{bold:true,size:12,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr }
             });
@@ -4013,10 +4029,11 @@ ${ytd ? `
             sheet.addRow([]);
             sheet.getRow(2).height = 18;
             const groups = [
-                {from:1,to:2,grp:'id'},{from:3,to:8,grp:'fixed'},
-                {from:9,to:13,grp:'att'},{from:14,to:19,grp:'pro'},
-                {from:20,to:24,grp:'ded'},{from:25,to:25,grp:'net'},
-                {from:26,to:26,grp:'sign'}
+                {from:1, to:2,  grp:'id'},   {from:3,  to:9,  grp:'fixed'},
+                {from:10,to:15, grp:'att'},  {from:16, to:21, grp:'pro'},
+                {from:22,to:26, grp:'ded'},  {from:27, to:27, grp:'net'},
+                {from:28,to:28, grp:'adv'},  {from:29, to:29, grp:'final'},
+                {from:30,to:30, grp:'sign'}
             ];
             groups.forEach(g => {
                 if (g.from < g.to) sheet.mergeCells(2,g.from,2,g.to);
@@ -4041,39 +4058,49 @@ ${ytd ? `
                 const r   = DATA_START + idx;
                 const row = sheet.addRow([
                     emp.id, emp.name,
-                    emp.gross, emp.basic, emp.hra, emp.conv, emp.spl, emp.med,
-                    emp.pDays, emp.phDays, emp.leavesAvailed, emp.absentDays, emp.totalDays,
-                    null,null,null,null,null,null, // N-S formula cols
-                    null,null,null,0,null,null,''  // T-Z
+                    emp.gross, emp.basic, emp.hra, emp.conv, emp.spl, emp.med, emp.vpf,
+                    emp.pDays, emp.phDays, emp.leavesAvailed, emp.sandwichDays, emp.absentDays, emp.totalDays,
+                    null,null,null,null,null,null,  // P-U prorated earnings (formula)
+                    null,null,null,null,null,       // V-Z deductions (formula): EPF, ESI, PT, VPF, T.DED.
+                    null,                             // AA NET (formula)
+                    0,                                  // AB ADV. — manual entry, defaults to 0, ADDS to Net
+                    null,                                // AC FINAL PAYABLE (formula)
+                    ''                                     // AD SIGN
                 ]);
                 row.height = 18;
 
                 // Set formulas individually (faster than passing in addRow array)
                 const fset = (col, f) => { row.getCell(col).value = { formula: f }; };
-                fset('N', `=ROUND(D${r}*(I${r}+J${r})/M${r},0)`);
-                fset('O', `=ROUND(E${r}*(I${r}+J${r})/M${r},0)`);
-                fset('P', `=ROUND(F${r}*(I${r}+J${r})/M${r},0)`);
-                fset('Q', `=ROUND(G${r}*(I${r}+J${r})/M${r},0)`);
-                fset('R', `=ROUND(H${r}*(I${r}+J${r})/M${r},0)`);
-                fset('S', `=ROUND(C${r}*(I${r}+J${r})/M${r},0)`);
-                fset('T', `=ROUND(N${r}*0.12,0)`);
-                fset('U', `=IF(C${r}<=21000,ROUND(S${r}*0.0075,0),0)`);
-                fset('V', `=IF(C${r}>=20000,200,IF(C${r}>=15000,150,0))`);
-                fset('X', `=T${r}+U${r}+V${r}+W${r}`);
-                fset('Y', `=S${r}-X${r}`);
+                // Payable-day component = P/Days + Ph/Days − Sandwich Ded. — the same
+                // reduction the individual payslip already applies via isSandwiched().
+                const payableExpr = `(J${r}+K${r}-M${r})`;
+                fset('P',  `=ROUND(D${r}*${payableExpr}/O${r},0)`);
+                fset('Q',  `=ROUND(E${r}*${payableExpr}/O${r},0)`);
+                fset('R',  `=ROUND(F${r}*${payableExpr}/O${r},0)`);
+                fset('S',  `=ROUND(G${r}*${payableExpr}/O${r},0)`);
+                fset('T',  `=ROUND(H${r}*${payableExpr}/O${r},0)`);
+                fset('U',  `=ROUND(C${r}*${payableExpr}/O${r},0)`);
+                fset('V',  `=ROUND(P${r}*0.12,0)`);
+                fset('W',  `=IF(C${r}<=21000,ROUND(U${r}*0.0075,0),0)`);
+                fset('X',  `=IF(C${r}>=20000,200,IF(C${r}>=15000,150,0))`);
+                fset('Y',  `=I${r}`);                              // VPF pulled straight from raw column I
+                fset('Z',  `=V${r}+W${r}+X${r}+Y${r}`);            // EPF + ESI + PT + VPF
+                fset('AA', `=U${r}-Z${r}`);                        // GROSS − Total Deductions = NET
+                fset('AC', `=AA${r}+AB${r}`);                      // NET + ADV. = FINAL PAYABLE (additive, not a deduction)
 
                 // Apply row styling (ONE loop, no eachCell)
                 const rowBg = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
                 colDefs.forEach((cd, ci) => {
                     const cell = row.getCell(ci+1);
                     const gc   = groupColors[cd.group];
+                    const isBold = cd.group === 'net' || cd.group === 'final';
                     // Alternate shading — lighter version of group color for odd rows
                     const bg   = idx % 2 === 0 ? gc.bg : rowBg;
                     cell.style = {
-                        fill:      { type:'pattern', pattern:'solid', fgColor:{argb:bg} },
+                        fill:      { type:'pattern', pattern:'solid', fgColor:{argb: cd.group === 'final' ? gc.bg : bg} },
                         alignment: { horizontal: ci < 2 ? 'left' : 'center', vertical:'middle' },
                         border:    bdr,
-                        font:      { size:9, bold: cd.group === 'net', color:{ argb: cd.group === 'net' ? 'FF065F46' : 'FF1e293b' } },
+                        font:      { size:9, bold: isBold, color:{ argb: cd.group === 'final' ? 'FFFFFFFF' : (cd.group === 'net' ? 'FF065F46' : 'FF1e293b') } },
                         numFmt:    cd.isCurr ? '"₹"#,##0' : 'General'
                     };
                 });
@@ -4081,13 +4108,16 @@ ${ytd ? `
 
             // ── Totals row ────────────────────────────────────────────────────
             const last = DATA_START + filteredRows.length - 1;
-            const sumCols = ['C','D','E','F','G','H','I','K','L','N','O','P','Q','R','S','T','U','V','W','X','Y'];
-            const totalVals = new Array(26).fill('');
+            // Excludes: A/B (id/name, text), K (Ph/Days — same value repeated per
+            // employee, summing it is meaningless), O (Total Days — same reason),
+            // AD (Sign, blank). Everything else sums to a meaningful company total.
+            const sumCols = ['C','D','E','F','G','H','I','J','L','M','N','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC'];
+            const totalVals = new Array(NUM_COLS).fill('');
             totalVals[0] = ''; totalVals[1] = 'TOTAL';
             const totalRow = sheet.addRow(totalVals);
             totalRow.height = 20;
             sumCols.forEach(col => {
-                const ci = col.charCodeAt(0) - 65 + 1;
+                const ci = col.length === 1 ? (col.charCodeAt(0) - 65 + 1) : (26 + (col.charCodeAt(1) - 65 + 1));
                 totalRow.getCell(col).value = { formula: `=SUM(${col}${DATA_START}:${col}${last})` };
                 const cd = colDefs[ci-1];
                 totalRow.getCell(col).style = {
@@ -4098,8 +4128,8 @@ ${ytd ? `
                     numFmt: cd && cd.isCurr ? '"₹"#,##0' : 'General'
                 };
             });
-            // Style non-sum total cells
-            [1,2,10,11,13,14,26].forEach(ci => {
+            // Style non-sum total cells (ID, Name, Ph/Days, Total Days, Sign)
+            [1,2,11,15,30].forEach(ci => {
                 totalRow.getCell(ci).style = { font:{bold:true,size:10,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr };
             });
             totalRow.getCell(2).value = 'TOTAL';
