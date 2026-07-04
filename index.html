@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#09090b">
     <!-- sw.js reads this value at install time and uses it as the cache key,
          so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
-    <meta name="V11" content="20260703">
+    <meta name="V11" content="20260701b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
@@ -3026,6 +3026,23 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
   <div style="font-size:11.5px;color:var(--text-muted);text-align:right;font-style:italic;">(Rupees ${wordsNet})</div>
 </div>
 
+<div class="emp-dash-box" style="background:rgba(245,158,11,0.07);border-color:#f59e0b;margin-bottom:5px;">
+  <div class="emp-dash-row" style="align-items:center;">
+    <span style="font-size:13px;font-weight:600;">➕ Advance / Additional (ADV.)</span>
+    <input type="number" id="payslip-adv-input" value="0" min="0" step="1"
+           style="width:110px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface-hover);color:var(--text-main);font-size:13px;text-align:right;"
+           oninput="updatePayslipFinalPayable(${roundedNet})">
+  </div>
+  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Added on top of Net Payout — not a deduction. Enter an amount if this payslip includes an extra advance or one-off payment.</div>
+</div>
+
+<div class="emp-dash-box" style="background:var(--bg-dark);border-color:var(--text-main);margin-bottom:5px;">
+  <div class="emp-dash-row" style="align-items:center;">
+    <span style="font-size:14px;font-weight:700;">FINAL PAYABLE</span>
+    <span id="payslip-final-payable" class="emp-dash-highlight" style="font-size:22px;">₹${roundedNet.toLocaleString('en-IN')}</span>
+  </div>
+</div>
+
 ${ytdBoxHTML}
 
 <button class="btn-main" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 14px rgba(37,99,235,0.35);" onclick="downloadPayslip()">🖨️ Download PDF Payslip</button>`;
@@ -3063,6 +3080,14 @@ ${ytdBoxHTML}
   .net-label    { font-size: 14px; font-weight: 700; color: #065f46; }
   .net-amount   { font-size: 24px; font-weight: 800; color: #059669; }
   .net-words    { font-size: 11px; color: #6b7280; font-style: italic; margin-top: 2px; }
+  .adv-box      { border: 2px dashed #d97706; border-radius: 10px; background: #fffbeb; padding: 12px 20px; margin-bottom: 14px; }
+  .adv-row      { display: flex; justify-content: space-between; align-items: center; }
+  .adv-label    { font-size: 12.5px; font-weight: 600; color: #92400e; }
+  .adv-input    { width: 120px; padding: 6px 10px; border: 1px solid #d97706; border-radius: 6px; font-size: 13px; text-align: right; font-family: inherit; }
+  .adv-note     { font-size: 10px; color: #92400e; margin-top: 4px; }
+  .final-box    { border: 2px solid #0f172a; border-radius: 10px; background: #0f172a; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .final-label  { font-size: 14px; font-weight: 700; color: #ffffff; }
+  .final-amount { font-size: 24px; font-weight: 800; color: #ffffff; }
   .footer       { text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 14px; }
   .sign-row     { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 32px; }
   .sign-box     { border-top: 1px solid #94a3b8; padding-top: 6px; font-size: 11px; color: #64748b; text-align: center; }
@@ -3123,6 +3148,19 @@ ${ytdBoxHTML}
   <div class="net-amount">₹ ${roundedNet.toLocaleString('en-IN')}</div>
 </div>
 
+<div class="adv-box">
+  <div class="adv-row">
+    <span class="adv-label">➕ Advance / Additional Payment (ADV.)</span>
+    <input type="number" class="adv-input" id="print-adv-input" value="0" min="0" step="1" oninput="updateFinalPayable()">
+  </div>
+  <div class="adv-note">Added on top of Net Payable — not a deduction. Enter an amount before printing if this payslip includes an extra advance or one-off payment.</div>
+</div>
+
+<div class="final-box">
+  <div class="final-label">Final Payable Amount</div>
+  <div class="final-amount" id="print-final-amount">₹ ${roundedNet.toLocaleString('en-IN')}</div>
+</div>
+
 ${ytd ? `
 <div class="info-box" style="margin-bottom:14px;border-color:#8b5cf6;background:#faf5ff;">
   <h3 style="color:#7c3aed;">Year-to-Date Summary — ${safeStr(ytd.fyLabel)} (${ytd.monthsCounted} month${ytd.monthsCounted !== 1 ? 's' : ''})</h3>
@@ -3148,6 +3186,15 @@ ${ytd ? `
 <div class="footer">
   This is a computer-generated payslip and does not require a physical signature. &nbsp;|&nbsp; DEPL, Muppireddypally, Telangana
 </div>
+<script>
+  var NET_PAY_BASE = ${roundedNet};
+  function updateFinalPayable() {
+    var advInput = document.getElementById('print-adv-input');
+    var adv = Math.max(0, parseFloat(advInput.value) || 0);
+    var final = NET_PAY_BASE + adv;
+    document.getElementById('print-final-amount').innerText = '\u20b9 ' + Math.round(final).toLocaleString('en-IN');
+  }
+<\/script>
 </body></html>`;
     }
 
@@ -3171,6 +3218,17 @@ ${ytd ? `
         const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: myEmplId, month: m });
         hideLoader();
         await renderPayslipToDiv(data, 'mypayslip-results', m);
+    }
+
+    // ADV. is additive to Net Payout, not a deduction — updates the Final Payable
+    // display live as the person types, in the in-app payslip view.
+    function updatePayslipFinalPayable(netAmount) {
+        const advInput = document.getElementById('payslip-adv-input');
+        const finalEl  = document.getElementById('payslip-final-payable');
+        if (!advInput || !finalEl) return;
+        const adv   = Math.max(0, parseFloat(advInput.value) || 0);
+        const final = netAmount + adv;
+        finalEl.innerText = `₹${Math.round(final).toLocaleString('en-IN')}`;
     }
 
     // currentPayslipHTML is a full <!DOCTYPE html> document — write via window.open()
