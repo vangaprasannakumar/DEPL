@@ -3045,6 +3045,18 @@ ${(data.category==='Staff With OT'||data.category==='Staff With SOT') ? `
 
 ${ytdBoxHTML}
 
+<div class="emp-dash-box" style="background:var(--surface-hover);margin-bottom:5px;">
+  <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;">What to include when printing</div>
+  <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-main);margin-bottom:8px;cursor:pointer;">
+    <input type="checkbox" id="print-include-adv" checked style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+    Include ADV. section in printed payslip
+  </label>
+  <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-main);cursor:pointer;">
+    <input type="checkbox" id="print-include-ytd" ${ytd ? 'checked' : 'disabled'} style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;">
+    Include Year-to-Date Summary in printed payslip${ytd ? '' : ' <span style="color:var(--text-muted);">(not available this month)</span>'}
+  </label>
+</div>
+
 <button class="btn-main" style="background:linear-gradient(135deg,#2563eb,#1d4ed8);box-shadow:0 4px 14px rgba(37,99,235,0.35);" onclick="downloadPayslip()">🖨️ Download PDF Payslip</button>`;
 
         // ── Professional print/PDF template ──
@@ -3091,6 +3103,8 @@ ${ytdBoxHTML}
   .footer       { text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 14px; }
   .sign-row     { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 32px; }
   .sign-box     { border-top: 1px solid #94a3b8; padding-top: 6px; font-size: 11px; color: #64748b; text-align: center; }
+  .print-cta    { display: block; width: 100%; margin: 4px 0 18px; padding: 13px; background: #2563eb; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+  @media print { .no-print { display: none !important; } }
 </style></head><body>
 
 <div class="header">
@@ -3148,6 +3162,7 @@ ${ytdBoxHTML}
   <div class="net-amount">₹ ${roundedNet.toLocaleString('en-IN')}</div>
 </div>
 
+<!--PRINT_ADV_BLOCK_START-->
 <div class="adv-box">
   <div class="adv-row">
     <span class="adv-label">➕ Advance / Additional Payment (ADV.)</span>
@@ -3160,7 +3175,9 @@ ${ytdBoxHTML}
   <div class="final-label">Final Payable Amount</div>
   <div class="final-amount" id="print-final-amount">₹ ${roundedNet.toLocaleString('en-IN')}</div>
 </div>
+<!--PRINT_ADV_BLOCK_END-->
 
+<!--PRINT_YTD_BLOCK_START-->
 ${ytd ? `
 <div class="info-box" style="margin-bottom:14px;border-color:#8b5cf6;background:#faf5ff;">
   <h3 style="color:#7c3aed;">Year-to-Date Summary — ${safeStr(ytd.fyLabel)} (${ytd.monthsCounted} month${ytd.monthsCounted !== 1 ? 's' : ''})</h3>
@@ -3177,6 +3194,9 @@ ${ytd ? `
     </div>
   </div>
 </div>` : ''}
+<!--PRINT_YTD_BLOCK_END-->
+
+<button class="print-cta no-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
 
 <div class="sign-row">
   <div class="sign-box">Employee Signature</div>
@@ -3190,10 +3210,13 @@ ${ytd ? `
   var NET_PAY_BASE = ${roundedNet};
   function updateFinalPayable() {
     var advInput = document.getElementById('print-adv-input');
+    var finalEl  = document.getElementById('print-final-amount');
+    if (!advInput || !finalEl) return;  // ADV block may be stripped out entirely
     var adv = Math.max(0, parseFloat(advInput.value) || 0);
     var final = NET_PAY_BASE + adv;
-    document.getElementById('print-final-amount').innerText = '\u20b9 ' + Math.round(final).toLocaleString('en-IN');
+    finalEl.innerText = '\u20b9 ' + Math.round(final).toLocaleString('en-IN');
   }
+  updateFinalPayable();  // reflect any carried-over ADV value immediately on open
 <\/script>
 </body></html>`;
     }
@@ -3204,9 +3227,16 @@ ${ytd ? `
         if (!m || !id) { document.getElementById('empdash-results').innerHTML='<p style="color:var(--danger);text-align:center;">Select employee and month.</p>'; return; }
         document.getElementById('empdash-results').innerHTML = '<p style="color:var(--text-muted);text-align:center;">Fetching payroll data...</p>';
         showLoader('payslip');
-        const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: id, month: m });
-        hideLoader();
-        await renderPayslipToDiv(data, 'empdash-results', m);
+        // Loader stays visible through renderPayslipToDiv() too — it makes its own
+        // (previously invisible) Year-to-Date roll-up call internally, which could
+        // otherwise leave the placeholder text sitting with no feedback for several
+        // seconds, looking stuck.
+        try {
+            const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: id, month: m });
+            await renderPayslipToDiv(data, 'empdash-results', m);
+        } finally {
+            hideLoader();
+        }
     }
 
     async function generateMyPayslip() {
@@ -3215,9 +3245,12 @@ ${ytd ? `
         if (!myEmplId) { document.getElementById('mypayslip-results').innerHTML='<p style="color:var(--danger);text-align:center;">Account not linked to an Employee ID.</p>'; return; }
         document.getElementById('mypayslip-results').innerHTML = '<p style="color:var(--text-muted);text-align:center;">Fetching payroll data...</p>';
         showLoader('payslip');
-        const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: myEmplId, month: m });
-        hideLoader();
-        await renderPayslipToDiv(data, 'mypayslip-results', m);
+        try {
+            const data = await callGoogleAPI({ action: 'getEmpDashData', emplId: myEmplId, month: m });
+            await renderPayslipToDiv(data, 'mypayslip-results', m);
+        } finally {
+            hideLoader();
+        }
     }
 
     // ADV. is additive to Net Payout, not a deduction — updates the Final Payable
@@ -3235,19 +3268,39 @@ ${ytd ? `
     // not innerHTML, which strips <head>/<style> tags and produces a blank page.
     function downloadPayslip() {
         if (!currentPayslipHTML) { showToast('Generate a payslip first.', 'warn'); return; }
-        showToast('Opening Print Dialog...');
+
+        let html = currentPayslipHTML;
+
+        // Carry over whatever ADV. value is currently in the in-app view, so the
+        // print window opens already reflecting it instead of resetting to 0 —
+        // the print template's own script re-runs updateFinalPayable() on load
+        // to pick up this carried-over value immediately.
+        const advInput = document.getElementById('payslip-adv-input');
+        const advValue = advInput ? Math.max(0, parseFloat(advInput.value) || 0) : 0;
+        if (advValue > 0) {
+            html = html.replace('id="print-adv-input" value="0"', `id="print-adv-input" value="${advValue}"`);
+        }
+
+        // Respect the two print-inclusion toggles — strip the section out of the
+        // print HTML entirely (not just hide it) so it genuinely doesn't appear
+        // in the printed page or saved PDF when unchecked.
+        const includeAdv = document.getElementById('print-include-adv')?.checked !== false;
+        const includeYtd = document.getElementById('print-include-ytd')?.checked !== false;
+        if (!includeAdv) html = html.replace(/<!--PRINT_ADV_BLOCK_START-->[\s\S]*?<!--PRINT_ADV_BLOCK_END-->/, '');
+        if (!includeYtd) html = html.replace(/<!--PRINT_YTD_BLOCK_START-->[\s\S]*?<!--PRINT_YTD_BLOCK_END-->/, '');
+
         const pw = window.open('', '_blank');
         if (!pw) {
             showToast('Pop-up blocked — please allow pop-ups for this site, then try again.', 'error');
             return;
         }
         pw.document.open();
-        pw.document.write(currentPayslipHTML);
+        pw.document.write(html);
         pw.document.close();
-        // Auto-trigger print once the new window's content is fully loaded
-        pw.onload = () => { setTimeout(() => pw.print(), 350); };
-        // Fallback for browsers that don't fire onload on document.write
-        setTimeout(() => { try { if (pw && !pw.closed) pw.print(); } catch(e) {} }, 900);
+        showToast('Payslip ready — review it and tap Print / Save as PDF when ready.');
+        // No auto-print timer — the person can review the carried-over ADV value
+        // and the included sections first, then tap the in-page Print button
+        // (or Ctrl/Cmd+P) when ready.
     }
 
     // ── HISTORY ──
