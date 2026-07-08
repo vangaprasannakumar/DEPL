@@ -15,7 +15,7 @@
     <meta name="theme-color" content="#09090b">
     <!-- sw.js reads this value at install time and uses it as the cache key,
          so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
-    <meta name="V12" content="20260707">
+    <meta name="V11" content="20260701b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
@@ -1196,6 +1196,8 @@
             <option value="Admin">Admin</option>
             <option value="HR">HR</option>
             <option value="Standby">Standby</option>
+            <option value="Security-1">Security-1</option>
+            <option value="Security-2">Security-2</option>
             <option value="Employee" selected>Employee</option>
         </select>
         <label for="user-email">Email</label><input type="text" id="user-email">
@@ -3332,46 +3334,40 @@ ${ytd ? `
     function renderHistory(data) {
         historyData = Array.isArray(data) ? data : [];
         const div = document.getElementById('history-results');
-        // Single-employee view when only one employee's records are returned
-        const isSingleEmp = historyData.length > 0 &&
-            historyData.every(d => d.emplId == historyData[0].emplId);
         if (!historyData || historyData.length === 0) return (div.innerHTML = '<p style="text-align:center;color:var(--text-muted);">No records found.</p>');
 
+        // Single-employee view when only one employee's records are returned —
+        // shows their name once in the header instead of repeating it every row.
+        const isSingleEmp = historyData.every(d => d.emplId == historyData[0].emplId);
+        const canEdit      = currentUser.role === 'Admin' || currentUser.role === 'HR';
+
+        let headerHTML;
         if (isSingleEmp) {
-            // Single-employee view — includes Date, Shift, In, Out, Permission, OT columns.
-            let tableHTML = `<div class="history-table-container"><div class="history-table-header"><h3 style="margin:0;color:var(--accent);font-size:15px;">${safeStr(String(data[0].emplId))} — ${safeStr(data[0].emplName)}</h3><p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">Records: ${data.length}</p></div><div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th><th>Shift</th><th>In</th><th>Out</th><th>Perm</th><th>OT</th>${(currentUser.role==='Admin'||currentUser.role==='HR')?'<th>Edit</th>':'<th>Req</th>'}</tr></thead><tbody>`;
-            data.forEach((r, idx) => {
-                const editBtn = (currentUser.role==='Admin'||currentUser.role==='HR')
-                    ? `<td><button onclick="openAttEdit(${idx})" style="background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;">Edit</button></td>`
-                    : `<td><button onclick="openCorrectionModal('${r.date}')" style="background:transparent;border:1px solid var(--warning);color:var(--warning);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;">Req</button></td>`;
-                let otStr = r.otTime || '--';
-                if (otStr !== '--' && otStr.includes(':')) { const p=otStr.split(':'); totalOTMins += (parseInt(p[0])*60)+parseInt(p[1]); }
-                let inT = r.inTime||'--', outT = r.outTime||'--';
-                if (r.inTime === 'LEAVE') { inT = 'LEAVE'; outT = 'LEAVE'; }
-                const permT = r.permTime || '--';
-                tableHTML += `<tr><td>${r.date.substring(0,5)}</td><td>${safeStr(r.shift)}</td><td style="color:var(--success);">${inT}</td><td style="color:var(--danger);">${outT}</td><td style="color:var(--warning);">${permT}</td><td style="color:var(--warning);font-weight:bold;">${safeStr(otStr)}</td>${editBtn}</tr>`;
-            });
-            const totalOTHrs = Math.floor(totalOTMins/60), totalOTRemMins = totalOTMins%60;
-            tableHTML += `</tbody></table></div><div style="padding:13px;background:rgba(128,128,128,0.1);text-align:right;border-top:1px solid rgba(128,128,128,0.2);"><strong style="color:var(--text-main);">Total OT: <span style="color:var(--warning);font-size:15px;">${totalOTHrs}:${totalOTRemMins.toString().padStart(2,'0')} Hrs</span></strong></div></div>`;
-            div.innerHTML = tableHTML;
+            headerHTML = `<h3 style="margin:0;color:var(--accent);font-size:15px;">${safeStr(String(historyData[0].emplId))} — ${safeStr(historyData[0].emplName)}</h3><p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">Records: ${historyData.length}</p>`;
         } else {
-            let html = '';
-            data.forEach((r, idx) => {
-                const editBtn = (currentUser.role==='Admin'||currentUser.role==='HR')
-                    ? `<div class="edit-badge" onclick="openAttEdit(${idx})">Edit</div>`
-                    : `<div class="edit-badge" style="color:var(--warning);border-color:var(--warning);" onclick="openCorrectionModal('${r.date}')">Req Edit</div>`;
-                let inT = r.inTime||'--', outT = r.outTime||'--';
-                let statusUI = `In: <strong style="color:var(--success)">${inT}</strong> | Out: <strong style="color:var(--danger)">${outT}</strong>`;
-                if (r.inTime === 'LEAVE') statusUI = `<strong style="color:var(--danger)">🔴 ON LEAVE</strong>`;
-                // #6: Show OT in the multi-card view when it exists
-                let otUI = '';
-                if (r.otTime && r.otTime !== '--' && r.otTime !== '') {
-                    otUI = `<div style="font-size:12px;color:var(--warning);margin-top:4px;font-weight:600;">⏱ OT: ${safeStr(r.otTime)}</div>`;
-                }
-                html += `<div class="card">${editBtn}<h4 style="color:var(--accent);">${safeStr(r.date)}</h4><div><strong>${safeStr(String(r.emplId))} — ${safeStr(r.emplName)}</strong></div><div style="font-size:12.5px;color:var(--text-muted);margin-top:4px;">${statusUI}</div>${otUI}</div>`;
-            });
-            div.innerHTML = html;
+            const empCount = new Set(historyData.map(d => d.emplId)).size;
+            headerHTML = `<h3 style="margin:0;color:var(--accent);font-size:15px;">Attendance Records</h3><p style="margin:4px 0 0;font-size:12px;color:var(--text-muted);">${historyData.length} record${historyData.length !== 1 ? 's' : ''} across ${empCount} employee${empCount !== 1 ? 's' : ''}</p>`;
         }
+
+        let tableHTML = `<div class="history-table-container"><div class="history-table-header">${headerHTML}</div><div class="history-table-wrapper"><table class="history-table"><thead><tr><th>Date</th>${isSingleEmp ? '' : '<th>Employee</th>'}<th>Shift</th><th>In</th><th>Out</th><th>Perm</th><th>OT</th>${canEdit ? '<th>Edit</th>' : '<th>Req</th>'}</tr></thead><tbody>`;
+
+        let totalOTMins = 0;
+        historyData.forEach((r, idx) => {
+            const editBtn = canEdit
+                ? `<td><button onclick="openAttEdit(${idx})" style="background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;">Edit</button></td>`
+                : `<td><button onclick="openCorrectionModal('${r.date}')" style="background:transparent;border:1px solid var(--warning);color:var(--warning);border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;">Req</button></td>`;
+            let otStr = r.otTime || '--';
+            if (otStr !== '--' && otStr.includes(':')) { const p = otStr.split(':'); totalOTMins += (parseInt(p[0]) * 60) + parseInt(p[1]); }
+            let inT = r.inTime || '--', outT = r.outTime || '--';
+            if (r.inTime === 'LEAVE') { inT = 'LEAVE'; outT = 'LEAVE'; }
+            const permT     = r.permTime || '--';
+            const emplCell  = isSingleEmp ? '' : `<td>${safeStr(String(r.emplId))} — ${safeStr(r.emplName)}</td>`;
+            tableHTML += `<tr><td>${r.date.substring(0,5)}</td>${emplCell}<td>${safeStr(r.shift)}</td><td style="color:var(--success);">${inT}</td><td style="color:var(--danger);">${outT}</td><td style="color:var(--warning);">${permT}</td><td style="color:var(--warning);font-weight:bold;">${safeStr(otStr)}</td>${editBtn}</tr>`;
+        });
+
+        const totalOTHrs = Math.floor(totalOTMins / 60), totalOTRemMins = totalOTMins % 60;
+        tableHTML += `</tbody></table></div><div style="padding:13px;background:rgba(128,128,128,0.1);text-align:right;border-top:1px solid rgba(128,128,128,0.2);"><strong style="color:var(--text-main);">Total OT: <span style="color:var(--warning);font-size:15px;">${totalOTHrs}:${totalOTRemMins.toString().padStart(2,'0')} Hrs</span></strong></div></div>`;
+        div.innerHTML = tableHTML;
     }
 
     // ── CORRECTIONS ──
