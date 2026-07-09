@@ -1,6 +1,6 @@
-// ─── DEPL HRMS — SERVICE WORKER ───────────────────────────────────────────────
+// ─── CAPCO WORKFORCE — SERVICE WORKER ─────────────────────────────────────────
 // Handles caching, offline fallback, and background sync of attendance punches.
-// Dada Energies Pvt. Ltd. | Muppireddypally, Telangana
+// Capco Capacitors | Muppireddypally, Telangana
 
 // ─── CONFIGURATION ────────────────────────────────────────────────────────────
 // Google Apps Script Web App URL — the single backend endpoint for all API calls.
@@ -10,11 +10,11 @@ const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbzsV8eP3nMkVUva7
 // Cache name is auto-detected from <meta name="app-version" content="YYYYMMDD">
 // in index.html at SW install time. Update that meta tag on every deploy.
 // If the tag is absent or the fetch fails, CACHE_DATE_FALLBACK is used instead.
-const CACHE_VERSION       = 'depl-hrms-v1';
-const CACHE_DATE_FALLBACK = '20260628';   // ← bump this if NOT using the meta tag
+const CACHE_VERSION       = 'capco-workforce-v1';
+const CACHE_DATE_FALLBACK = '20260709';   // ← bump this if NOT using the meta tag
 
 // ─── INDEXED DB CONFIGURATION ────────────────────────────────────────────────
-const DB_NAME    = 'DEPLOfflineDB';
+const DB_NAME    = 'CapcoOfflineDB';
 const STORE_NAME = 'pending_punches';
 
 // ─── FACE-API VERSION ─────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ self.addEventListener('install', (event) => {
 // The install and activate events run in different call stacks.
 // We persist the resolved cache name in a tiny IDB record so activate()
 // can read exactly the same name without re-fetching index.html.
-const META_DB_NAME  = 'DEPLSWMeta';
+const META_DB_NAME  = 'CapcoSWMeta';
 const META_STORE    = 'sw_meta';
 const META_KEY      = 'resolved_cache_name';
 
@@ -233,9 +233,11 @@ self.addEventListener('activate', (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames.map(name => {
-          // Delete old capco-hrms caches (rebranding cleanup) and any
-          // stale depl-hrms caches — keep only the current cache name.
-          const isOurs = name.startsWith('depl-hrms') || name.startsWith('capco-hrms');
+          // Delete any cache from a previous branding generation — original
+          // capco-hrms (pre-rebrand), depl-hrms (mid-2026 rebrand), or a
+          // stale capco-workforce cache from an earlier deploy of this
+          // current generation — keeping only the current cache name.
+          const isOurs = name.startsWith('capco-workforce') || name.startsWith('depl-hrms') || name.startsWith('capco-hrms');
           if (isOurs && name !== currentCache) {
             console.log(`[SW] 🗑️ Deleting old cache: ${name}`);
             return caches.delete(name);
@@ -493,7 +495,7 @@ function generateOfflineHTML() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DEPL HRMS — Offline</title>
+  <title>Capco Workforce — Offline</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -542,7 +544,7 @@ function generateOfflineHTML() {
     // Show how many offline punches are waiting so kiosk operators feel confident
     (function checkPending() {
       try {
-        const req = indexedDB.open('DEPLOfflineDB', 1);
+        const req = indexedDB.open('CapcoOfflineDB', 1);
         req.onsuccess = function() {
           const db = req.result;
           if (!db.objectStoreNames.contains('pending_punches')) return;
