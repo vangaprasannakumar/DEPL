@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DEPL HRMS</title>
-    <link rel="icon" type="image/png" sizes="48x48"  href="https://i.postimg.cc/pVFqM3R8/DEPL-logo-launchericon-48x48.png">
-    <link rel="icon" type="image/png" sizes="72x72"  href="https://i.postimg.cc/qB3jHW4K/DEPL-logo-launchericon-72x72.png">
-    <link rel="icon" type="image/png" sizes="96x96"  href="https://i.postimg.cc/MZQdJgqV/DEPL-logo-launchericon-96x96.png">
-    <link rel="icon" type="image/png" sizes="144x144" href="https://i.postimg.cc/Y2WbBTM6/DEPL-logo-launchericon-144x144.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="https://i.postimg.cc/BZKMfR4c/DEPL-logo-launchericon-512x512.png">
-    <link rel="apple-touch-icon" href="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png">
+    <title>Capco Workforce</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="https://i.postimg.cc/FzbHSc1B/launchericon_512x512.png">
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/ZnP5N30s/launchericon_192x192.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffffff">
     <!-- sw.js reads this value at install time and uses it as the cache key,
          so bumping it evicts the old cache on the next visit. Format: YYYYMMDD -->
-    <meta name="app-version" content="20260701b">
+    <meta name="V12" content="20260709">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="DEPL HRMS">
+    <meta name="apple-mobile-web-app-title" content="Capco Workforce">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Work+Sans:wght@500;600;700;800&display=optional" rel="stylesheet">
@@ -549,7 +545,7 @@
 
 <div id="loader">
     <img src="https://capcocapacitor.com/wp-content/uploads/2022/06/Group-199.png" alt="Capco Capacitors">
-    <h3>DEPL HRMS APP</h3>
+    <h3>CAPCO WORKFORCE</h3>
 </div>
 
     <!-- BELL PANEL — Correction Requests (Admin & HR) -->
@@ -667,7 +663,7 @@
 <nav id="desktop-sidebar">
     <div class="sidebar-logo">
         <img src="https://capcocapacitor.com/wp-content/uploads/2022/06/Group-199.png" alt="Capco Capacitors">
-        <div class="sidebar-logo-text"><h3>DEPL HRMS</h3></div>
+        <div class="sidebar-logo-text"><h3>Capco HR</h3></div>
     </div>
     <div class="sidebar-nav">
         <div class="sidebar-section">Main</div>
@@ -3149,8 +3145,8 @@ ${ytdBoxHTML}
 
 <div class="header">
   <div>
-    <img src="https://i.postimg.cc/fW9BQ1D7/DEPL-logo-launchericon-192x192.png" alt="DEPL Logo" style="height:48px;margin-bottom:8px;display:block;">
-    <div class="company-name">DEPL</div>
+    <img src="https://capcocapacitor.com/wp-content/uploads/2022/06/Group-199.png" alt="Capco Capacitors" style="height:48px;margin-bottom:8px;display:block;">
+    <div class="company-name">CAPCO</div>
     <div class="company-sub">Muppireddypally, Telangana<br>HR Department</div>
   </div>
   <div>
@@ -3244,7 +3240,7 @@ ${ytd ? `
 </div>
 
 <div class="footer">
-  This is a computer-generated payslip and does not require a physical signature. &nbsp;|&nbsp; DEPL, Muppireddypally, Telangana
+  This is a computer-generated payslip and does not require a physical signature. &nbsp;|&nbsp; Capco Capacitors, Muppireddypally, Telangana
 </div>
 <script>
   var NET_PAY_BASE = ${roundedNet};
@@ -3930,7 +3926,7 @@ ${ytd ? `
         for (let i=0; i<byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
         const blob = new Blob([new Uint8Array(byteNumbers)], { type:'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob); link.download = `DEPL_Attendance_${m}.csv`;
+        link.href = URL.createObjectURL(blob); link.download = `Capco_Attendance_${m}.csv`;
         document.body.appendChild(link); link.click(); document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
         showToast('CSV Downloaded');
@@ -4169,7 +4165,7 @@ ${ytd ? `
             colDefs.forEach((cd, i) => { sheet.getColumn(i+1).width = cd.w; });
 
             // ── Row 1: Main title ─────────────────────────────────────────────
-            sheet.addRow([`DEPL  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
+            sheet.addRow([`CAPCO  |  ${mName.toUpperCase()} ${year} SALARY STATEMENT${asOf}`]);
             sheet.mergeCells(1,1,1,NUM_COLS);
             Object.assign(sheet.getRow(1).getCell(1), {
                 style:{ font:{bold:true,size:12,color:{argb:'FFFFFFFF'}}, fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF0F172A'}}, alignment:{horizontal:'center',vertical:'middle'}, border:bdr }
